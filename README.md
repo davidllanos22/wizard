@@ -6,6 +6,11 @@ Tiny HTML5 2D game engine. Created for game jams and simple games in general.
 
 Bla
 
+##Plugins
+
+- Variable/function exposer
+- HTML and CSS UI
+
 ##License
 
 The MIT License (MIT)
