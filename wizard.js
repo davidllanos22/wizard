@@ -15,18 +15,92 @@ WIZARD.create = function(data){
 
     var totalImagesToLoad = 0;
 
+    var normal_vs = `attribute vec2 a_position;
+                    uniform sampler2D u_image;
+                    varying vec2 f_texcoord;
+                    uniform vec2 u_resolution;
+                     
+                    void main(void){
+                      vec2 zeroToOne = a_position;
+                      vec2 zeroToTwo = zeroToOne * 2.0;
+                      vec2 clipSpace = zeroToTwo - 1.0;
+                      gl_Position = vec4(clipSpace * vec2(1, -1), 0.0, 1.0);
+                      f_texcoord = (clipSpace + 1.0) / 2.0;
+                    }
+                  `;
+
+    var normal_fs = `precision mediump float;
+                    uniform sampler2D u_image;
+                    varying vec2 f_texcoord;
+                    
+                    bool colorEqual(vec3 a, vec3 b){
+                        vec3 eps = vec3(0.009, 0.009, 0.009);
+                        return all(greaterThanEqual(a, b - eps)) && all(lessThanEqual(a, b + eps));
+                    }
+                    
+                    void main(void){
+                      vec2 texcoord = f_texcoord;
+                      vec3 colorIn = texture2D(u_image, texcoord).rgb;
+                      vec3 colorOut = colorIn;
+
+                      vec3 colorAIn = vec3(0.3529411765, 0.5490196078, 0.6470588235);
+                      vec3 colorAOut = vec3(1.0, 0, 0);
+                      
+                      if(colorEqual(colorIn, colorAIn)){
+                         colorOut = colorAOut;
+                      }
+                      
+                      gl_FragColor = vec4(colorOut, 1.0);
+                     }
+                     
+                     
+                  `;
+
+
     // Create the canvas element.
     wiz.canvas = document.createElement("canvas");
+    wiz.glCanvas = document.createElement("canvas");
     wiz.canvas.width = wiz.width * pixelRatio * wiz.scale;
     wiz.canvas.height = wiz.height * pixelRatio * wiz.scale;
-    wiz.canvas.style.pixelated = true;
     //wiz.canvas.style.backgroundColor = "black";
-
-    // Add the canvas to the DOM.
-    document.body.appendChild(wiz.canvas);
 
     // Get the context of the canvas.
     wiz.ctx = wiz.canvas.getContext("2d");
+    wiz.gl = wiz.glCanvas.getContext("webgl");
+
+    var gl = wiz.gl;
+
+    // Web GL init
+    wiz.glCanvas.tabIndex = 1;
+    wiz.glCanvas.style.outline = "none";
+
+    wiz.glCanvas.width = wiz.width * pixelRatio * wiz.scale;
+    wiz.glCanvas.height = wiz.height * pixelRatio * wiz.scale;
+
+    gl.viewport(0, 0, wiz.width * pixelRatio * wiz.scale, wiz.height * pixelRatio * wiz.scale);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+
+    //create the default shader
+    var vs = createShader(gl.VERTEX_SHADER, normal_vs);
+    var fs = createShader(gl.FRAGMENT_SHADER, normal_fs);
+
+    var shader_stuff = {
+        buffers: new Map(),
+        locations: new Map(),
+        currentProgram: createProgram(vs, fs),
+        canvasTexture: createTexture()
+    };
+
+    // console.log(gl.getShaderInfoLog(vs));
+    // console.log(gl.getShaderInfoLog(fs));
+    // console.log(gl.getProgramParameter(shader_stuff.currentProgram, gl.LINK_STATUS));
+    // console.log(gl.getProgramInfoLog(shader_stuff.currentProgram));
+
+    // Add the canvas to the DOM.
+    //document.body.appendChild(wiz.canvas);
+    document.body.appendChild(wiz.glCanvas);
 
     // Game loop.
     var desiredFPS = 60;
@@ -81,6 +155,93 @@ WIZARD.create = function(data){
         wiz.ctx.mozImageSmoothingEnabled = !wiz.pixelArt;
         wiz.ctx.msImageSmoothingEnabled = !wiz.pixelArt;
         wiz.render();
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        renderCanvasToWebGL(wiz.canvas);
+    }
+
+    function createShader(type, source){
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+    }
+
+    function createProgram(vs, fs){
+        var program = gl.createProgram();
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        return program;
+    }
+
+    function renderCanvasToWebGL(canvas){
+        gl.useProgram(shader_stuff.currentProgram);
+        gl.uniform2f(getUniform("u_resolution"), wiz.width, wiz.height);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, getBuffer("pos"));
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            0.0,  0.0,
+            1.0,  0.0,
+            0.0,  1.0,
+            0.0,  1.0,
+            1.0,  0.0,
+            1.0,  1.0]), gl.STATIC_DRAW);
+
+        gl.enableVertexAttribArray(getAttribute("a_position"));
+        gl.vertexAttribPointer(getAttribute("a_position"), 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindTexture(gl.TEXTURE_2D, shader_stuff.canvasTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+
+        gl.uniform1i(getUniform("u_image"), shader_stuff.canvasTexture);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    function getBuffer(){
+        if(shader_stuff.buffers.has(name)){
+            return shader_stuff.buffers.get(name);
+        }
+        else{
+            shader_stuff.buffers.set(name, gl.createBuffer());
+            return getBuffer(name);
+        }
+    }
+
+    function getUniform(name){
+        if(shader_stuff.locations.has(name)){
+            return shader_stuff.locations.get(name);
+        }
+        else{
+            gl.useProgram(shader_stuff.currentProgram);
+            var a = gl.getUniformLocation(shader_stuff.currentProgram, name);
+            shader_stuff.locations.set(name, a);
+            return shader_stuff.locations.get(name);
+        }
+    }
+
+    function getAttribute(name){
+        if(shader_stuff.locations.has(name)){
+            return shader_stuff.locations.get(name);
+        }
+        else{
+            gl.useProgram(shader_stuff.currentProgram);
+            var a = gl.getAttribLocation(shader_stuff.currentProgram, name);
+            shader_stuff.locations.set(name, a);
+            return shader_stuff.locations.get(name);
+        }
+    }
+
+    function createTexture(){
+        var texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+        return texture;
     }
 
     wiz.play = create;
