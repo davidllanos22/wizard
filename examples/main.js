@@ -3,12 +3,12 @@
  */
 
 var w = wizard({
-    width: 256,
-    height: 256,
-    scale: 2,
+    width: 160,
+    height: 144,
+    scale: 3,
     pixelArt: true,
     create: function(){
-        this.loadImages("wizard.png");
+        this.loadImages("wizard.png", "bw.png");
         //w.loadData("map");
         //w.loadSounds("fire", "medikit", "music");
     },
@@ -21,12 +21,12 @@ w.play();
 var x = 0;
 
 function update(){
-    x++;
+    x+=0.2;
 }
 
 function render(){
-    w.clear("#000");
+    w.clear("#686868");
     //w.fillRect(x, 0, 50, 50, "#F00");
     //console.log(w.images["wizard"]);
-    w.drawImage(w.images["wizard"], 100, 100, 64, 64);
+    w.drawImage(w.images["bw"], x, 100, 64, 64);
 }

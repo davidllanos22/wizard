@@ -43,11 +43,27 @@ WIZARD.create = function(data){
                       vec3 colorIn = texture2D(u_image, texcoord).rgb;
                       vec3 colorOut = colorIn;
 
-                      vec3 colorAIn = vec3(0.3529411765, 0.5490196078, 0.6470588235);
-                      vec3 colorAOut = vec3(1.0, 0, 0);
+                      vec3 color1In = vec3(0, 0, 0);
+                      vec3 color2In = vec3(0.4078431373, 0.4078431373, 0.4078431373);
+                      vec3 color3In = vec3(0.7176470588, 0.7176470588, 0.7176470588);
+                      vec3 color4In = vec3(1, 1, 1);
                       
-                      if(colorEqual(colorIn, colorAIn)){
-                         colorOut = colorAOut;
+                      vec3 color1Out = vec3(0.1254901961, 0.07058823529, 0.01176470588);
+                      vec3 color2Out = vec3(0.1254901961, 0.3568627451, 0.3411764706);
+                      vec3 color3Out = vec3(0.6745098039, 0.4392156863, 0.4549019608);
+                      vec3 color4Out = vec3(0.8431372549, 0.9294117647, 0.8745098039);
+                      
+                      if(colorEqual(colorIn, color1In)){
+                         colorOut = color1Out;
+                      }
+                      if(colorEqual(colorIn, color2In)){
+                         colorOut = color2Out;
+                      }
+                      if(colorEqual(colorIn, color3In)){
+                         colorOut = color3Out;
+                      }
+                      if(colorEqual(colorIn, color4In)){
+                         colorOut = color4Out;
                       }
                       
                       gl_FragColor = vec4(colorOut, 1.0);
@@ -78,7 +94,7 @@ WIZARD.create = function(data){
     wiz.glCanvas.height = wiz.height * pixelRatio * wiz.scale;
 
     gl.viewport(0, 0, wiz.width * pixelRatio * wiz.scale, wiz.height * pixelRatio * wiz.scale);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.4078431373, 0.4078431373, 0.4078431373, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
@@ -93,10 +109,10 @@ WIZARD.create = function(data){
         canvasTexture: createTexture()
     };
 
-    // console.log(gl.getShaderInfoLog(vs));
-    // console.log(gl.getShaderInfoLog(fs));
-    // console.log(gl.getProgramParameter(shader_stuff.currentProgram, gl.LINK_STATUS));
-    // console.log(gl.getProgramInfoLog(shader_stuff.currentProgram));
+    console.log(gl.getShaderInfoLog(vs));
+    console.log(gl.getShaderInfoLog(fs));
+    console.log(gl.getProgramParameter(shader_stuff.currentProgram, gl.LINK_STATUS));
+    console.log(gl.getProgramInfoLog(shader_stuff.currentProgram));
 
     // Add the canvas to the DOM.
     //document.body.appendChild(wiz.canvas);
