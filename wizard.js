@@ -20,7 +20,6 @@ WIZARD.core = function(data){
     var normal_vs = `attribute vec2 a_position;
                     uniform sampler2D u_image;
                     varying vec2 f_texcoord;
-                    uniform vec2 u_resolution;
                      
                     void main(void){
                       vec2 zeroToOne = a_position;
@@ -35,40 +34,44 @@ WIZARD.core = function(data){
                     uniform sampler2D u_image;
                     varying vec2 f_texcoord;
                     
+                    const vec3 color1In = vec3(0.0, 0.0, 0.0);
+                    const vec3 color2In = vec3(104.0, 104.0, 104.0);
+                    const vec3 color3In = vec3(183.0, 183.0, 183.0);
+                    const vec3 color4In = vec3(255.0, 255.0, 255.0);
+                  
+                    uniform vec3 u_color1Out;
+                    uniform vec3 u_color2Out;
+                    uniform vec3 u_color3Out;
+                    uniform vec3 u_color4Out;
+                    
+                    vec3 convertColor(vec3 color){
+                        return vec3(color.r / 255.0, color.g / 255.0, color.b / 255.0);
+                    }
+                    
                     bool colorEqual(vec3 a, vec3 b){
+                        vec3 converted = convertColor(b);
                         vec3 eps = vec3(0.009, 0.009, 0.009);
-                        return all(greaterThanEqual(a, b - eps)) && all(lessThanEqual(a, b + eps));
+                        return all(greaterThanEqual(a, converted - eps)) && all(lessThanEqual(a, converted + eps));
                     }
                     
                     void main(void){
                       vec2 texcoord = f_texcoord;
-                      vec3 colorIn = texture2D(u_image, texcoord).rgb;
-                      vec3 colorOut = colorIn;
-
-                      vec3 color1In = vec3(0.0, 0.0, 0.0);
-                      vec3 color2In = vec3(0.4078431373, 0.4078431373, 0.4078431373);
-                      vec3 color3In = vec3(0.7176470588, 0.7176470588, 0.7176470588);
-                      vec3 color4In = vec3(1.0, 1.0, 1.0);
+                      vec3 color = texture2D(u_image, texcoord).rgb;
                       
-                      vec3 color1Out = vec3(0.1254901961, 0.07058823529, 0.01176470588);
-                      vec3 color2Out = vec3(0.1254901961, 0.3568627451, 0.3411764706);
-                      vec3 color3Out = vec3(0.6745098039, 0.4392156863, 0.4549019608);
-                      vec3 color4Out = vec3(0.8431372549, 0.9294117647, 0.8745098039);
-                      
-                      if(colorEqual(colorIn, color1In)){
-                         colorOut = color1Out;
+                      if(colorEqual(color, color1In)){
+                         color = convertColor(u_color1Out);
                       }
-                      if(colorEqual(colorIn, color2In)){
-                         colorOut = color2Out;
+                      if(colorEqual(color, color2In)){
+                         color = convertColor(u_color2Out);
                       }
-                      if(colorEqual(colorIn, color3In)){
-                         colorOut = color3Out;
+                      if(colorEqual(color, color3In)){
+                         color = convertColor(u_color3Out);
                       }
-                      if(colorEqual(colorIn, color4In)){
-                         colorOut = color4Out;
+                      if(colorEqual(color, color4In)){
+                         color = convertColor(u_color4Out);
                       }
                       
-                      gl_FragColor = vec4(colorOut, 1.0);
+                      gl_FragColor = vec4(color, 1.0);
                      }
                   `;
 
@@ -92,6 +95,8 @@ WIZARD.core = function(data){
     wiz.glCanvas.width = wiz.width * pixelRatio * wiz.scale;
     wiz.glCanvas.height = wiz.height * pixelRatio * wiz.scale;
 
+    wiz.ctx.scale(wiz.scale, wiz.scale);
+
     gl.viewport(0, 0, wiz.width * pixelRatio * wiz.scale, wiz.height * pixelRatio * wiz.scale);
     gl.clearColor(0.4078431373, 0.4078431373, 0.4078431373, 1.0);
     gl.enable(gl.DEPTH_TEST);
@@ -99,11 +104,6 @@ WIZARD.core = function(data){
 
     wiz.currentProgram = WIZARD.shader.create(gl, normal_vs, normal_fs);
     wiz.canvasTexture = WIZARD.shader.createTexture();
-
-    // console.log(gl.getShaderInfoLog(vs));
-    // console.log(gl.getShaderInfoLog(fs));
-    // console.log(gl.getProgramParameter(shader_stuff.currentProgram, gl.LINK_STATUS));
-    // console.log(gl.getProgramInfoLog(shader_stuff.currentProgram));
 
     // Add the canvas to the DOM.
     //document.body.appendChild(wiz.canvas);
@@ -169,7 +169,11 @@ WIZARD.core = function(data){
     // Render the canvas2D to a WebGL canvas
     function renderCanvasToWebGL(canvas){
         gl.useProgram(wiz.currentProgram);
-        gl.uniform2f(WIZARD.shader.getUniform("u_resolution"), wiz.width, wiz.height);
+
+        gl.uniform3f(WIZARD.shader.getUniform("u_color1Out"),  Math.random() * 255, 18, Math.random() * 255);
+        gl.uniform3f(WIZARD.shader.getUniform("u_color2Out"), 32, 91, 87);
+        gl.uniform3f(WIZARD.shader.getUniform("u_color3Out"), 172, 112, 116);
+        gl.uniform3f(WIZARD.shader.getUniform("u_color4Out"), 215, 237, 223);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, WIZARD.shader.getBuffer("pos"));
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -214,7 +218,7 @@ WIZARD.core = function(data){
 
     // Clears the screen.
     wiz.clear = function(color){
-        wiz.fillRect(0, 0 , wiz.width * pixelRatio * wiz.scale, wiz.height * pixelRatio *  wiz.scale, color);
+        wiz.fillRect(0, 0 , wiz.width, wiz.height, color);
     };
 
     wiz.fillRect = function(x, y, w, h, color){
@@ -224,7 +228,7 @@ WIZARD.core = function(data){
 
     wiz.drawImage = function(imgName, x, y){
         var img = WIZARD.images[imgName];
-        wiz.ctx.drawImage(img, x, y, img.width * wiz.scale * pixelRatio, img.height * wiz.scale * pixelRatio);
+        wiz.ctx.drawImage(img, x, y, img.width, img.height);
     };
 
     wiz.drawSprite = function(imgName, x, y, w, h, xx, yy, ww, hh){
@@ -349,6 +353,11 @@ WIZARD.shader = {
         var vs = this._createShader(gl.VERTEX_SHADER, vsCode);
         var fs = this._createShader(gl.FRAGMENT_SHADER, fsCode);
         program = this._createProgram(vs, fs);
+
+        // console.log(gl.getShaderInfoLog(vs));
+        // console.log(gl.getShaderInfoLog(fs));
+        // console.log(gl.getProgramParameter(program, gl.LINK_STATUS));
+        // console.log(gl.getProgramInfoLog(program));
         return program;
     },
 

@@ -2,7 +2,7 @@
  * Created by davidllanos22 on 1/9/16.
  */
 
-var x = 0;
+var x = -16;
 
 wizard({
     width: 160,
@@ -18,13 +18,14 @@ wizard({
 
     update: function(){
         x+=0.2;
-        if(x > 2 & x < 2.5){
+        if(x > this.width) x = - 16;
+        if(x > 0 & x < 0.2){
             console.log(WIZARD.data["a"]);
-            //this.playSound("sound01", true);
+            this.playSound("sound01");
         }
     },
     render: function(){
         this.clear("#686868");
-        this.drawImage("bw", x, 100, 64, 64);
+        this.drawImage("bw", x, 72, 64, 64);
     }
 }).play();
