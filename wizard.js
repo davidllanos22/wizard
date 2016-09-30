@@ -1,5 +1,5 @@
 /*
-* - time operations
+* - En movil no funciona AudioContext.
 * - Transición mediante colores (fade a claro - fade a oscuro)
 * */
 
@@ -238,6 +238,18 @@ WIZARD.core = function(data){
 
     wiz.drawSprite = function(imgName, x, y, xx, yy){
         var img = WIZARD.images[imgName];
+        wiz.ctx.drawImage(img, xx * 16, yy * 16, 16, 16, x, y, 16, 16);
+    };
+
+    wiz.drawAnimation = function(imgName, animName, x, y){
+        var img = WIZARD.images[imgName];
+        var anim = WIZARD.animations[animName];
+        WIZARD.time.createTimer("animation_" + animName, anim.frameDuration, function(){
+            anim.currentFrame ++;
+            anim.currentFrame %= anim.frames.length;
+        }, "infinite");
+        var xx = anim.frames[anim.currentFrame][0];
+        var yy = anim.frames[anim.currentFrame][1];
         wiz.ctx.drawImage(img, xx * 16, yy * 16, 16, 16, x, y, 16, 16);
     };
 
@@ -582,6 +594,49 @@ WIZARD.shader = {
     }
 };
 
+WIZARD.time = {
+
+    getCurrent: function(){
+      return new Date();
+    },
+
+    createTimer: function(name, time, callback, numRepetitions){
+        var timer = WIZARD.timers[name];
+        if(timer == null) {
+            WIZARD.timers[name] = {
+                time: time,
+                callback: callback,
+                numRepetitions: numRepetitions
+            };
+            WIZARD.time._callTimer(name);
+        }
+    },
+
+    _callTimer: function(name){
+        var timer = WIZARD.timers[name];
+        setTimeout(function () {
+            timer.callback.call();
+            if (timer.numRepetitions == "infinite") {
+                WIZARD.time._callTimer(name);
+            } else if (timer.numRepetitions > 0) {
+                timer.numRepetitions--;
+                WIZARD.time._callTimer(name);
+            }
+        }, timer.time);
+    }
+
+};
+
+WIZARD.animation = {
+    create: function(name, frames, frameDuration){
+        WIZARD.animations[name] = {
+            frames: frames,
+            frameDuration: frameDuration,
+            currentFrame: 0
+        }
+    }
+};
+
 WIZARD.paths = {
     images: "assets/img/",
     sounds: "assets/sound/",
@@ -591,5 +646,7 @@ WIZARD.paths = {
 WIZARD.images = {};
 WIZARD.sounds = {};
 WIZARD.data = {};
+WIZARD.timers = {};
+WIZARD.animations = {};
 
 window.wizard = WIZARD.core;

@@ -6,12 +6,14 @@ var speed = 0.2;
 wizard({
     width: 160,
     height: 144,
-    scale: 3,
+    scale: 5,
     pixelArt: true,
     create: function(){
         this.loadImages("wizard.png", "bw.png", "spritesheet.png");
         this.loadSounds("sound01.wav");
         this.loadData("a.txt");
+        WIZARD.animation.create("random", [[0,0], [1,0], [0,1], [1,1]], 500);
+        WIZARD.animation.create("random2", [[0,0], [1,0], [0,1], [1,1]], 200);
     },
 
     update: function(){
@@ -31,7 +33,9 @@ wizard({
     render: function(){
         this.clear("#686868");
         this.drawImage("bw", body.x, body.y);
-        this.drawSprite("spritesheet", 16, 16, 1, 1);
+        //this.drawSprite("spritesheet", 16, 16, 1, 1);
+        this.drawAnimation("spritesheet", "random", 16, 16);
+        this.drawAnimation("spritesheet", "random2", 32, 16);
         if(WIZARD.physics.intersects(body, body2)){
             this.drawAABB(body, "#ff0000");
             this.drawAABB(body2, "#ff0000");
