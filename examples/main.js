@@ -19,12 +19,12 @@ wizard({
     update: function(){
         x+=0.2;
         if(x > 2 & x < 2.5){
-            console.log(this.data["a"]);
-            this.playSound(this.sounds["sound01"], true);
+            console.log(WIZARD.data["a"]);
+            //this.playSound("sound01", true);
         }
     },
     render: function(){
         this.clear("#686868");
-        this.drawImage(this.images["bw"], x, 100, 64, 64);
+        this.drawImage("bw", x, 100, 64, 64);
     }
 }).play();

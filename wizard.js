@@ -3,24 +3,19 @@
  */
 
 /*
-* - Input
 * - Spritesheet (pivot??)
+* - Input
 * - Colision básica
-* -
-*
-*
 * */
 
 var WIZARD = WIZARD || {};
 
 WIZARD.version = "0.1.0";
 
-WIZARD.create = function(data){
+WIZARD.core = function(data){
     var wiz = data || {};
 
     var pixelRatio = 1;
-
-    var totalFilesToLoad = 0;
 
     var normal_vs = `attribute vec2 a_position;
                     uniform sampler2D u_image;
@@ -94,7 +89,6 @@ WIZARD.create = function(data){
     var gl = wiz.gl;
     wiz.glCanvas.tabIndex = 1;
     wiz.glCanvas.style.outline = "none";
-
     wiz.glCanvas.width = wiz.width * pixelRatio * wiz.scale;
     wiz.glCanvas.height = wiz.height * pixelRatio * wiz.scale;
 
@@ -102,8 +96,6 @@ WIZARD.create = function(data){
     gl.clearColor(0.4078431373, 0.4078431373, 0.4078431373, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
-
-    console.log(WIZARD.shader);
 
     wiz.currentProgram = WIZARD.shader.create(gl, normal_vs, normal_fs);
     wiz.canvasTexture = WIZARD.shader.createTexture();
@@ -174,6 +166,7 @@ WIZARD.create = function(data){
         renderCanvasToWebGL(wiz.canvas);
     }
 
+    // Render the canvas2D to a WebGL canvas
     function renderCanvasToWebGL(canvas){
         gl.useProgram(wiz.currentProgram);
         gl.uniform2f(WIZARD.shader.getUniform("u_resolution"), wiz.width, wiz.height);
@@ -200,96 +193,22 @@ WIZARD.create = function(data){
     }
 
     wiz.play = create;
+    wiz.ready = ready;
 
     /** LOAD **/
-    wiz.images = {};
-    wiz.sounds = {};
-    wiz.data = {};
+    WIZARD.loader._init(wiz);
 
     wiz.loadImages = function(){
-        console.log("Loading images...");
-        totalFilesToLoad += arguments.length;
-        for (var i = 0; i < arguments.length; i++) {
-            loadFile(arguments[i], "image");
-        }
+        WIZARD.loader.loadImages(arguments);
     };
 
     wiz.loadSounds = function(){
-        console.log("Loading sounds...");
-        totalFilesToLoad += arguments.length;
-        for (var i = 0; i < arguments.length; i++) {
-            loadFile(arguments[i], "sound");
-        }
+        WIZARD.loader.loadSounds(arguments);
     };
 
     wiz.loadData = function(){
-        console.log("Loading data...");
-        totalFilesToLoad += arguments.length;
-        for (var i = 0; i < arguments.length; i++) {
-            loadFile(arguments[i], "data");
-        }
+        WIZARD.loader.loadData(arguments);
     };
-
-    function loadImage(path){
-        var image = new Image();
-        image.onload = function(){
-            console.log("Image file loaded: " + path);
-            var name = path.substr(0, path.lastIndexOf('.'));
-            wiz.images[name] = image;
-            totalFilesToLoad--;
-            if(totalFilesToLoad == 0){
-                ready();
-            }
-        };
-        image.src = WIZARD.paths.images + path;
-    }
-
-    function loadSound(path){
-        var req = new XMLHttpRequest();
-        req.open("GET",  WIZARD.paths.sounds + path, true);
-        req.responseType = 'arraybuffer';
-
-        req.onload = function(){
-            wiz.actx.decodeAudioData(req.response, function(audio){
-                console.log("Audio file loaded: " + path);
-                var name = path.substr(0, path.lastIndexOf('.'));
-                wiz.sounds[name] = audio;
-                totalFilesToLoad--;
-                if(totalFilesToLoad == 0){
-                    ready();
-                }
-            }, null);
-        };
-        req.send();
-    }
-
-    function loadData(path){
-        var req = new XMLHttpRequest();
-        req.open("GET",  WIZARD.paths.data + path, true);
-
-        req.onreadystatechange = function(){
-            if (req.readyState == 4) {
-                console.log("Data file loaded: " + path);
-                var name = path.substr(0, path.lastIndexOf('.'));
-                wiz.data[name] = req.responseText;
-                totalFilesToLoad--;
-                if(totalFilesToLoad == 0){
-                    ready();
-                }
-            }
-        };
-        req.send();
-    }
-
-    function loadFile(path, type){
-        if(type == "image"){
-            loadImage(path);
-        }else if(type == "sound"){
-            loadSound(path);
-        }else if(type == "data"){
-            loadData(path);
-        }
-    }
 
     /** RENDER **/
 
@@ -303,16 +222,18 @@ WIZARD.create = function(data){
         wiz.ctx.fillRect(x, y , w, h);
     };
 
-    wiz.drawImage = function(img, x, y){
+    wiz.drawImage = function(imgName, x, y){
+        var img = WIZARD.images[imgName];
         wiz.ctx.drawImage(img, x, y, img.width * wiz.scale * pixelRatio, img.height * wiz.scale * pixelRatio);
     };
 
-    wiz.drawSprite = function(img, x, y, w, h, xx, yy, ww, hh){
+    wiz.drawSprite = function(imgName, x, y, w, h, xx, yy, ww, hh){
+        var img = WIZARD.images[imgName];
         wiz.ctx.drawImage(img, xx * ww, yy * hh, ww, hh, x, y, w, h);
     };
 
-    wiz.playSound = function(sound, loop){
-        if(!sound) return;
+    wiz.playSound = function(soundName, loop){
+        var sound = WIZARD.sounds[soundName];
         var source = wiz.actx.createBufferSource();
         source.buffer = sound;
         source.loop = loop;
@@ -323,6 +244,100 @@ WIZARD.create = function(data){
     return wiz;
 };
 
+WIZARD.loader = {
+    totalFilesToLoad: 0,
+    wiz: null,
+
+    _init: function(wiz){
+        this.wiz = wiz;
+    },
+
+    _loadFileOfType: function(path, type){
+        if(type == "image"){
+            this._loadImage(path);
+        }else if(type == "sound"){
+            this._loadSound(path);
+        }else if(type == "data"){
+            this._loadData(path);
+        }
+    },
+
+    loadImages: function(paths){
+        console.log("Loading images...");
+        this.totalFilesToLoad += paths.length;
+        for (var i = 0; i < paths.length; i++) {
+            this._loadFileOfType(paths[i], "image");
+        }
+    },
+
+    loadSounds: function(paths){
+        console.log("Loading sounds...");
+        this.totalFilesToLoad += paths.length;
+        for (var i = 0; i < paths.length; i++) {
+            this._loadFileOfType(paths[i], "sound");
+        }
+    },
+
+    loadData: function(paths){
+        console.log("Loading data...");
+        this.totalFilesToLoad += paths.length;
+        for (var i = 0; i < paths.length; i++) {
+            this._loadFileOfType(paths[i], "data");
+        }
+    },
+
+    _loadImage: function(path){
+        var image = new Image();
+        image.onload = function(){
+            console.log("Image file loaded: " + path);
+            var name = path.substr(0, path.lastIndexOf('.'));
+            WIZARD.images[name] = image;
+            WIZARD.loader.totalFilesToLoad--;
+            if(WIZARD.loader.totalFilesToLoad == 0){
+                WIZARD.loader.wiz.ready();
+            }
+        };
+        image.src = WIZARD.paths.images + path;
+    },
+
+    _loadSound: function(path){
+        var req = new XMLHttpRequest();
+        req.open("GET",  WIZARD.paths.sounds + path, true);
+        req.responseType = 'arraybuffer';
+
+        req.onload = function(){
+            WIZARD.loader.wiz.actx.decodeAudioData(req.response, function(audio){
+                console.log("Audio file loaded: " + path);
+                var name = path.substr(0, path.lastIndexOf('.'));
+                WIZARD.sounds[name] = audio;
+                WIZARD.loader.totalFilesToLoad--;
+                if(WIZARD.loader.totalFilesToLoad == 0){
+                    WIZARD.loader.wiz.ready();
+                }
+            }, null);
+        };
+        req.send();
+    },
+
+    _loadData: function(path){
+        var req = new XMLHttpRequest();
+        req.open("GET",  WIZARD.paths.data + path, true);
+
+        req.onreadystatechange = function(){
+            if (req.readyState == 4) {
+                console.log("Data file loaded: " + path);
+                var name = path.substr(0, path.lastIndexOf('.'));
+                WIZARD.data[name] = req.responseText;
+                WIZARD.loader.totalFilesToLoad--;
+                if(WIZARD.loader.totalFilesToLoad == 0){
+                    WIZARD.loader.wiz.ready();
+                }
+            }
+        };
+        req.send();
+    }
+};
+
 WIZARD.shader = {
     buffers: new Map(),
     locations: new Map(),
@@ -331,9 +346,9 @@ WIZARD.shader = {
     create: function(gl, vsCode, fsCode){
         this.gl = gl;
         //Create the default shader
-        var vs = this.createShader(gl.VERTEX_SHADER, vsCode);
-        var fs = this.createShader(gl.FRAGMENT_SHADER, fsCode);
-        program = this.createProgram(vs, fs);
+        var vs = this._createShader(gl.VERTEX_SHADER, vsCode);
+        var fs = this._createShader(gl.FRAGMENT_SHADER, fsCode);
+        program = this._createProgram(vs, fs);
         return program;
     },
 
@@ -381,14 +396,14 @@ WIZARD.shader = {
         }
     },
 
-    createShader: function(type, source){
+    _createShader: function(type, source){
         var shader = this.gl.createShader(type);
         this.gl.shaderSource(shader, source);
         this.gl.compileShader(shader);
         return shader;
     },
 
-    createProgram: function(vs, fs){
+    _createProgram: function(vs, fs){
         var program = this.gl.createProgram();
         this.gl.attachShader(program, vs);
         this.gl.attachShader(program, fs);
@@ -403,4 +418,8 @@ WIZARD.paths = {
     data: "assets/data/"
 };
 
-window.wizard = WIZARD.create;
+WIZARD.images = {};
+WIZARD.sounds = {};
+WIZARD.data = {};
+
+window.wizard = WIZARD.core;
