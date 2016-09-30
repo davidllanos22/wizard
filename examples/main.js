@@ -11,14 +11,16 @@ wizard({
     pixelArt: true,
     create: function(){
         this.loadImages("wizard.png", "bw.png");
-        //w.loadData("map");
         this.loadSounds("sound01.wav");
+        this.loadData("a.txt");
+
     },
 
     update: function(){
         x+=0.2;
         if(x > 2 & x < 2.5){
-            this.playSound(this.sounds["sound01"]);
+            console.log(this.data["a"]);
+            this.playSound(this.sounds["sound01"], true);
         }
     },
     render: function(){

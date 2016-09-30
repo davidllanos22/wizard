@@ -3,9 +3,6 @@
  */
 
 /*
-* - Loader:
-*   - Cargar ficheros de texto??
-*
 * - Input
 * - Spritesheet (pivot??)
 * - Colision básica
@@ -22,8 +19,6 @@ WIZARD.create = function(data){
     var wiz = data || {};
 
     var pixelRatio = 1;
-
-    var totalImagesToLoad = 0;
 
     var totalFilesToLoad = 0;
 
@@ -209,6 +204,7 @@ WIZARD.create = function(data){
     /** LOAD **/
     wiz.images = {};
     wiz.sounds = {};
+    wiz.data = {};
 
     wiz.loadImages = function(){
         console.log("Loading images...");
@@ -226,9 +222,18 @@ WIZARD.create = function(data){
         }
     };
 
+    wiz.loadData = function(){
+        console.log("Loading data...");
+        totalFilesToLoad += arguments.length;
+        for (var i = 0; i < arguments.length; i++) {
+            loadFile(arguments[i], "data");
+        }
+    };
+
     function loadImage(path){
         var image = new Image();
         image.onload = function(){
+            console.log("Image file loaded: " + path);
             var name = path.substr(0, path.lastIndexOf('.'));
             wiz.images[name] = image;
             totalFilesToLoad--;
@@ -258,11 +263,31 @@ WIZARD.create = function(data){
         req.send();
     }
 
+    function loadData(path){
+        var req = new XMLHttpRequest();
+        req.open("GET",  WIZARD.paths.data + path, true);
+
+        req.onreadystatechange = function(){
+            if (req.readyState == 4) {
+                console.log("Data file loaded: " + path);
+                var name = path.substr(0, path.lastIndexOf('.'));
+                wiz.data[name] = req.responseText;
+                totalFilesToLoad--;
+                if(totalFilesToLoad == 0){
+                    ready();
+                }
+            }
+        };
+        req.send();
+    }
+
     function loadFile(path, type){
         if(type == "image"){
             loadImage(path);
         }else if(type == "sound"){
             loadSound(path);
+        }else if(type == "data"){
+            loadData(path);
         }
     }
 
@@ -286,10 +311,11 @@ WIZARD.create = function(data){
         wiz.ctx.drawImage(img, xx * ww, yy * hh, ww, hh, x, y, w, h);
     };
 
-    wiz.playSound = function(sound){
+    wiz.playSound = function(sound, loop){
         if(!sound) return;
         var source = wiz.actx.createBufferSource();
         source.buffer = sound;
+        source.loop = loop;
         source.connect(wiz.actx.destination);
         source.start(0);
     };
@@ -373,7 +399,8 @@ WIZARD.shader = {
 
 WIZARD.paths = {
     images: "assets/img/",
-    sounds: "assets/sound/"
+    sounds: "assets/sound/",
+    data: "assets/data/"
 };
 
 window.wizard = WIZARD.create;
