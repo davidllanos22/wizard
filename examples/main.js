@@ -14,8 +14,8 @@ wizard({
     update: function(){
         x+=0.2;
         if(x > this.width) x = - 16;
-        if(x > 0 & x < 0.2){
-            console.log(WIZARD.data["a"]);
+
+        if(WIZARD.input.keyJustPressed(WIZARD.keys.A)){
             this.playSound("sound01");
         }
     },
