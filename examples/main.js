@@ -1,7 +1,3 @@
-/**
- * Created by davidllanos22 on 1/9/16.
- */
-
 var x = -16;
 
 wizard({
@@ -10,10 +6,9 @@ wizard({
     scale: 3,
     pixelArt: true,
     create: function(){
-        this.loadImages("wizard.png", "bw.png");
+        this.loadImages("wizard.png", "bw.png", "spritesheet.png");
         this.loadSounds("sound01.wav");
         this.loadData("a.txt");
-
     },
 
     update: function(){
@@ -26,6 +21,7 @@ wizard({
     },
     render: function(){
         this.clear("#686868");
-        this.drawImage("bw", x, 72, 64, 64);
+        this.drawImage("bw", x, 72);
+        this.drawSprite("spritesheet", 16, 16, 1, 1);
     }
 }).play();

@@ -1,11 +1,8 @@
-/**
- * Created by davidllanos22 on 1/9/16.
- */
-
 /*
-* - Spritesheet (pivot??)
+* - Spritesheet
 * - Input
 * - Colision básica
+* - Transición mediante colores (fade a claro - fade a oscuro)
 * */
 
 var WIZARD = WIZARD || {};
@@ -231,9 +228,9 @@ WIZARD.core = function(data){
         wiz.ctx.drawImage(img, x, y, img.width, img.height);
     };
 
-    wiz.drawSprite = function(imgName, x, y, w, h, xx, yy, ww, hh){
+    wiz.drawSprite = function(imgName, x, y, xx, yy){
         var img = WIZARD.images[imgName];
-        wiz.ctx.drawImage(img, xx * ww, yy * hh, ww, hh, x, y, w, h);
+        wiz.ctx.drawImage(img, xx * 16, yy * 16, 16, 16, x, y, 16, 16);
     };
 
     wiz.playSound = function(soundName, loop){
