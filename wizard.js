@@ -1,5 +1,5 @@
 /*
-* - Colision básica
+* - time operations
 * - Transición mediante colores (fade a claro - fade a oscuro)
 * */
 
@@ -224,6 +224,13 @@ WIZARD.core = function(data){
         wiz.ctx.fillRect(x, y , w, h);
     };
 
+    wiz.drawAABB = function(body, color){
+        wiz.ctx.fillStyle = null;
+        wiz.ctx.strokeStyle = color;
+        wiz.ctx.lineWidth = 1/wiz.scale;
+        wiz.ctx.strokeRect(body.x, body.y , body.w, body.h);
+    };
+
     wiz.drawImage = function(imgName, x, y){
         var img = WIZARD.images[imgName];
         wiz.ctx.drawImage(img, x, y, img.width, img.height);
@@ -244,6 +251,21 @@ WIZARD.core = function(data){
     };
 
     return wiz;
+};
+
+WIZARD.physics = {
+    createAABB: function(x, y, w, h){
+        return {
+            x: x,
+            y: y,
+            w: w,
+            h: h
+        }
+    },
+
+    intersects: function(a, b){
+        return (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y );
+    }
 };
 
 WIZARD.keys = {
