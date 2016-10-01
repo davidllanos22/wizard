@@ -1,6 +1,5 @@
 /*
 * - En movil no funciona AudioContext.
-* - Transición mediante colores (fade a claro - fade a oscuro)
 * */
 
 var WIZARD = WIZARD || {};
@@ -161,14 +160,69 @@ WIZARD.core = function(data){
         renderCanvasToWebGL(wiz.canvas);
     }
 
+    var color1 = {
+        r: 32,
+        g: 18,
+        b: 3
+    };
+    var color2 = {
+        r: 32,
+        g: 91,
+        b: 87
+    };
+    var color3 = {
+        r: 172,
+        g: 112,
+        b: 116
+    };
+    var color4 = {
+        r: 215,
+        g: 237,
+        b: 223
+    };
+
+    var colorList = [color1, color2, color3, color4];
+
+    var currentColors = [color4,color4,color4,color4];//colorList;
+
+    var count = 0;
+
     // Render the canvas2D to a WebGL canvas
     function renderCanvasToWebGL(canvas){
         gl.useProgram(wiz.currentProgram);
 
-        gl.uniform3f(WIZARD.shader.getUniform("u_color1Out"),  Math.random() * 255, 18, Math.random() * 255);
-        gl.uniform3f(WIZARD.shader.getUniform("u_color2Out"), 32, 91, 87);
-        gl.uniform3f(WIZARD.shader.getUniform("u_color3Out"), 172, 112, 116);
-        gl.uniform3f(WIZARD.shader.getUniform("u_color4Out"), 215, 237, 223);
+        // WIZARD.time.createTimer("fade a claro", 150, function(){
+        //     for(var i = 0; i <  colorList.length - 1 - count; i++){
+        //         currentColors[i] = currentColors[i+1]
+        //     }
+        //     count++;
+        // }, 3);
+
+        // WIZARD.time.createTimer("fade oscuro a normal", 500, function(){
+        //     for(var i = colorList.length - 1; i > colorList.length - 1 - count; i--){
+        //         currentColors[i] = colorList[i - (3 - count)];
+        //     }
+        //     count++;
+        // }, 3);
+
+        WIZARD.time.createTimer("fade claro a normal", 100, function(){
+            for(var i = 0; i < count; i++){
+                currentColors[i] = colorList[i + (3 - count)];
+            }
+            count++;
+        }, 3);
+
+        // WIZARD.time.createTimer("fade a oscuro", 800, function(){
+        //     for(var i = colorList.length; i > count; i--){
+        //         currentColors[i] = currentColors[i-1]
+        //     }
+        //     count++;
+        // }, 3);
+
+        gl.uniform3f(WIZARD.shader.getUniform("u_color1Out"), currentColors[0].r, currentColors[0].g, currentColors[0].b);
+        gl.uniform3f(WIZARD.shader.getUniform("u_color2Out"), currentColors[1].r, currentColors[1].g, currentColors[1].b);
+        gl.uniform3f(WIZARD.shader.getUniform("u_color3Out"), currentColors[2].r, currentColors[2].g, currentColors[2].b);
+        gl.uniform3f(WIZARD.shader.getUniform("u_color4Out"), currentColors[3].r, currentColors[3].g, currentColors[3].b);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, WIZARD.shader.getBuffer("pos"));
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -595,18 +649,19 @@ WIZARD.shader = {
 };
 
 WIZARD.time = {
-
     getCurrent: function(){
       return new Date();
     },
 
-    createTimer: function(name, time, callback, numRepetitions){
+    createTimer: function(name, time, callback, numRepetitions, finishCallback){
         var timer = WIZARD.timers[name];
         if(timer == null) {
             WIZARD.timers[name] = {
                 time: time,
                 callback: callback,
-                numRepetitions: numRepetitions
+                numRepetitions: numRepetitions,
+                stop: false,
+                finishCallback: finishCallback
             };
             WIZARD.time._callTimer(name);
         }
@@ -615,12 +670,16 @@ WIZARD.time = {
     _callTimer: function(name){
         var timer = WIZARD.timers[name];
         setTimeout(function () {
-            timer.callback.call();
-            if (timer.numRepetitions == "infinite") {
-                WIZARD.time._callTimer(name);
-            } else if (timer.numRepetitions > 0) {
-                timer.numRepetitions--;
-                WIZARD.time._callTimer(name);
+            timer.callback();
+            if(!timer.stop) {
+                if (timer.numRepetitions == "infinite") {
+                    WIZARD.time._callTimer(name);
+                }else if (timer.numRepetitions > 0) {
+                    timer.numRepetitions--;
+                    WIZARD.time._callTimer(name);
+                }else{
+                   if(timer.finishCallback != null) timer.finishCallback();
+                }
             }
         }, timer.time);
     }
@@ -628,7 +687,7 @@ WIZARD.time = {
 };
 
 WIZARD.animation = {
-    create: function(name, frames, frameDuration){
+    createFrameAnimation: function(name, frames, frameDuration){
         WIZARD.animations[name] = {
             frames: frames,
             frameDuration: frameDuration,

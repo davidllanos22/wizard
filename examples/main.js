@@ -6,19 +6,21 @@ var speed = 0.2;
 wizard({
     width: 160,
     height: 144,
-    scale: 5,
+    scale: 3,
     pixelArt: true,
     create: function(){
         this.loadImages("wizard.png", "bw.png", "spritesheet.png");
         this.loadSounds("sound01.wav");
         this.loadData("a.txt");
-        WIZARD.animation.create("random", [[0,0], [1,0], [0,1], [1,1]], 500);
-        WIZARD.animation.create("random2", [[0,0], [1,0], [0,1], [1,1]], 200);
+        WIZARD.animation.createFrameAnimation("random", [[0,0], [1,0], [0,1], [1,1]], 500);
+        WIZARD.animation.createFrameAnimation("random2", [[0,0], [1,0], [0,1], [1,1]], 200);
     },
 
     update: function(){
-
         if(body.x > this.width) body.x = - 16;
+        else if(body.x < - 16) body.x = this.width;
+        if(body.y > this.height) body.y = - 16;
+        else if(body.y < - 16) body.y = this.height;
 
         if(WIZARD.input.keyPressed(WIZARD.keys.A)){
             body.x -= speed;
