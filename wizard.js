@@ -1,7 +1,3 @@
-/*
-* - En movil no funciona AudioContext.
-* */
-
 var WIZARD = WIZARD || {};
 
 WIZARD.version = "0.1.0";
@@ -28,44 +24,8 @@ WIZARD.core = function(data){
                     uniform sampler2D u_image;
                     varying vec2 f_texcoord;
                     
-                    const vec3 color1In = vec3(0.0, 0.0, 0.0);
-                    const vec3 color2In = vec3(104.0, 104.0, 104.0);
-                    const vec3 color3In = vec3(183.0, 183.0, 183.0);
-                    const vec3 color4In = vec3(255.0, 255.0, 255.0);
-                  
-                    uniform vec3 u_color1Out;
-                    uniform vec3 u_color2Out;
-                    uniform vec3 u_color3Out;
-                    uniform vec3 u_color4Out;
-                    
-                    vec3 convertColor(vec3 color){
-                        return vec3(color.r / 255.0, color.g / 255.0, color.b / 255.0);
-                    }
-                    
-                    bool colorEqual(vec3 a, vec3 b){
-                        vec3 converted = convertColor(b);
-                        vec3 eps = vec3(0.009, 0.009, 0.009);
-                        return all(greaterThanEqual(a, converted - eps)) && all(lessThanEqual(a, converted + eps));
-                    }
-                    
                     void main(void){
-                      vec2 texcoord = f_texcoord;
-                      vec3 color = texture2D(u_image, texcoord).rgb;
-                      
-                      if(colorEqual(color, color1In)){
-                         color = convertColor(u_color1Out);
-                      }
-                      if(colorEqual(color, color2In)){
-                         color = convertColor(u_color2Out);
-                      }
-                      if(colorEqual(color, color3In)){
-                         color = convertColor(u_color3Out);
-                      }
-                      if(colorEqual(color, color4In)){
-                         color = convertColor(u_color4Out);
-                      }
-                      
-                      gl_FragColor = vec4(color, 1.0);
+                      gl_FragColor = texture2D(u_image, f_texcoord);
                      }
                   `;
 
@@ -81,6 +41,17 @@ WIZARD.core = function(data){
 
     // Create audio context
     wiz.actx = new AudioContext();
+    visibilitychange();
+
+    document.addEventListener("visibilitychange", visibilitychange);
+
+    function visibilitychange(){
+        if(document.hidden){
+            wiz.actx.suspend();
+        }else{
+            wiz.actx.resume();
+        }
+    }
 
     // Init webGL
     var gl = wiz.gl;
@@ -92,7 +63,7 @@ WIZARD.core = function(data){
     wiz.ctx.scale(wiz.scale, wiz.scale);
 
     gl.viewport(0, 0, wiz.width * pixelRatio * wiz.scale, wiz.height * pixelRatio * wiz.scale);
-    gl.clearColor(0.4078431373, 0.4078431373, 0.4078431373, 1.0);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
@@ -155,74 +126,20 @@ WIZARD.core = function(data){
         wiz.ctx.imageSmoothingEnabled = !wiz.pixelArt;
         wiz.ctx.mozImageSmoothingEnabled = !wiz.pixelArt;
         wiz.ctx.msImageSmoothingEnabled = !wiz.pixelArt;
-        wiz.render();
+
+        wiz.ctx.save();
+        wiz.ctx.translate(-WIZARD.camera.x, -WIZARD.camera.y);
+        //wiz.ctx.rotate(WIZARD.camera.rot * Math.PI / 180);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        wiz.render();
+        wiz.ctx.restore();
+
         renderCanvasToWebGL(wiz.canvas);
     }
-
-    var color1 = {
-        r: 32,
-        g: 18,
-        b: 3
-    };
-    var color2 = {
-        r: 32,
-        g: 91,
-        b: 87
-    };
-    var color3 = {
-        r: 172,
-        g: 112,
-        b: 116
-    };
-    var color4 = {
-        r: 215,
-        g: 237,
-        b: 223
-    };
-
-    var colorList = [color1, color2, color3, color4];
-
-    var currentColors = [color4,color4,color4,color4];//colorList;
-
-    var count = 0;
 
     // Render the canvas2D to a WebGL canvas
     function renderCanvasToWebGL(canvas){
         gl.useProgram(wiz.currentProgram);
-
-        // WIZARD.time.createTimer("fade a claro", 150, function(){
-        //     for(var i = 0; i <  colorList.length - 1 - count; i++){
-        //         currentColors[i] = currentColors[i+1]
-        //     }
-        //     count++;
-        // }, 3);
-
-        // WIZARD.time.createTimer("fade oscuro a normal", 500, function(){
-        //     for(var i = colorList.length - 1; i > colorList.length - 1 - count; i--){
-        //         currentColors[i] = colorList[i - (3 - count)];
-        //     }
-        //     count++;
-        // }, 3);
-
-        WIZARD.time.createTimer("fade claro a normal", 100, function(){
-            for(var i = 0; i < count; i++){
-                currentColors[i] = colorList[i + (3 - count)];
-            }
-            count++;
-        }, 3);
-
-        // WIZARD.time.createTimer("fade a oscuro", 800, function(){
-        //     for(var i = colorList.length; i > count; i--){
-        //         currentColors[i] = currentColors[i-1]
-        //     }
-        //     count++;
-        // }, 3);
-
-        gl.uniform3f(WIZARD.shader.getUniform("u_color1Out"), currentColors[0].r, currentColors[0].g, currentColors[0].b);
-        gl.uniform3f(WIZARD.shader.getUniform("u_color2Out"), currentColors[1].r, currentColors[1].g, currentColors[1].b);
-        gl.uniform3f(WIZARD.shader.getUniform("u_color3Out"), currentColors[2].r, currentColors[2].g, currentColors[2].b);
-        gl.uniform3f(WIZARD.shader.getUniform("u_color4Out"), currentColors[3].r, currentColors[3].g, currentColors[3].b);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, WIZARD.shader.getBuffer("pos"));
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -258,6 +175,10 @@ WIZARD.core = function(data){
         WIZARD.loader.loadImages(arguments);
     };
 
+    wiz.noLoading = function(){
+        WIZARD.loader.noLoading();
+    };
+
     wiz.loadSounds = function(){
         WIZARD.loader.loadSounds(arguments);
     };
@@ -270,7 +191,7 @@ WIZARD.core = function(data){
 
     // Clears the screen.
     wiz.clear = function(color){
-        wiz.fillRect(0, 0 , wiz.width, wiz.height, color);
+        wiz.fillRect(WIZARD.camera.x, WIZARD.camera.y, wiz.width, wiz.height, color);
     };
 
     wiz.fillRect = function(x, y, w, h, color){
@@ -290,21 +211,50 @@ WIZARD.core = function(data){
         wiz.ctx.drawImage(img, x, y, img.width, img.height);
     };
 
-    wiz.drawSprite = function(imgName, x, y, xx, yy){
-        var img = WIZARD.images[imgName];
-        wiz.ctx.drawImage(img, xx * 16, yy * 16, 16, 16, x, y, 16, 16);
+    wiz.drawSprite = function(spritesheetName, x, y, xx, yy){
+        var spritesheet = WIZARD.spritesheets[spritesheetName];
+        var img = WIZARD.images[spritesheet.imgName];
+        wiz.ctx.drawImage(img, xx * spritesheet.spriteWidth, yy * spritesheet.spriteHeight, spritesheet.spriteWidth, spritesheet.spriteHeight, x, y, spritesheet.spriteWidth, spritesheet.spriteHeight);
     };
 
-    wiz.drawAnimation = function(imgName, animName, x, y){
-        var img = WIZARD.images[imgName];
+    wiz.drawAnimation = function(spritesheetName, animName, x, y){
+        var spritesheet = WIZARD.spritesheets[spritesheetName];
+        var img = WIZARD.images[spritesheet.imgName];
         var anim = WIZARD.animations[animName];
+        if(anim.reset){
+            anim.currentFrame = 0;
+            anim.reset = false;
+        }
         WIZARD.time.createTimer("animation_" + animName, anim.frameDuration, function(){
             anim.currentFrame ++;
             anim.currentFrame %= anim.frames.length;
         }, "infinite");
         var xx = anim.frames[anim.currentFrame][0];
         var yy = anim.frames[anim.currentFrame][1];
-        wiz.ctx.drawImage(img, xx * 16, yy * 16, 16, 16, x, y, 16, 16);
+        wiz.ctx.drawImage(img, xx * spritesheet.spriteWidth, yy * spritesheet.spriteHeight, spritesheet.spriteWidth, spritesheet.spriteHeight, x, y, spritesheet.spriteWidth, spritesheet.spriteHeight);
+    };
+
+    wiz.drawTextSystem = function(font, text, x, y, color){
+        wiz.ctx.fillStyle = color;
+        wiz.ctx.font = font;
+        wiz.ctx.fillText(text, x, y);
+    };
+
+    wiz.drawText = function(text, x, y, font){
+        var chars = "ABCDEFGHIJKLMNOP"+
+            "QRSTUVWXYZ012345"+
+            "6789!?,.*>      ";
+
+        for(var i = 0; i < text.length; i++){
+            for(var j = 0; j < chars.length; j++){
+                var char = text.charAt(i);
+                if(chars.charAt(j) == char.toUpperCase()){
+                    var xx = j % 16;
+                    var yy = Math.floor(j/16);
+                    wiz.drawSprite(font, x + (i * 8), y, xx, yy);
+                }
+            }
+        }
     };
 
     wiz.playSound = function(soundName, loop){
@@ -330,7 +280,7 @@ WIZARD.physics = {
     },
 
     intersects: function(a, b){
-        return (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y );
+        return (a!= null && b != null) && (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y );
     }
 };
 
@@ -447,7 +397,7 @@ WIZARD.input = {
     _init: function(wiz){
         this.wiz = wiz;
         window.onkeydown = function(e){
-            if(e == 32 || e == 37 || e == 38 || e == 39 || e == 40){
+            if(e.keyCode == 32 || e.keyCode == 37 || e.keyCode == 38 || e.keyCode == 39 || e.keyCode == 40){
                 e.preventDefault();
             }
             WIZARD.input.kP[e.keyCode] = true;
@@ -491,6 +441,10 @@ WIZARD.loader = {
         }else if(type == "data"){
             this._loadData(path);
         }
+    },
+
+    noLoading: function(){
+        WIZARD.loader.wiz.ready();
     },
 
     loadImages: function(paths){
@@ -620,7 +574,7 @@ WIZARD.shader = {
         }
     },
 
-     getAttribute: function(name){
+    getAttribute: function(name){
         if(this.locations.has(name)){
             return this.locations.get(name);
         }
@@ -650,35 +604,37 @@ WIZARD.shader = {
 
 WIZARD.time = {
     getCurrent: function(){
-      return new Date();
+        return new Date();
     },
 
-    createTimer: function(name, time, callback, numRepetitions, finishCallback){
+    createTimer: function(name, time, callback, numRepetitions, recreate){
         var timer = WIZARD.timers[name];
-        if(timer == null) {
+        if(timer == null || recreate) {
             WIZARD.timers[name] = {
                 time: time,
                 callback: callback,
                 numRepetitions: numRepetitions,
                 stop: false,
-                finishCallback: finishCallback
             };
             WIZARD.time._callTimer(name);
         }
     },
 
+    removeTimer: function(name){
+        var timer = WIZARD.timers[name];
+        clearTimeout(timer.timeout);
+    },
+
     _callTimer: function(name){
         var timer = WIZARD.timers[name];
-        setTimeout(function () {
+        timer.timeout = setTimeout(function () {
             timer.callback();
             if(!timer.stop) {
                 if (timer.numRepetitions == "infinite") {
                     WIZARD.time._callTimer(name);
-                }else if (timer.numRepetitions > 0) {
+                }else if (!isNaN(timer.numRepetitions)) {
                     timer.numRepetitions--;
-                    WIZARD.time._callTimer(name);
-                }else{
-                   if(timer.finishCallback != null) timer.finishCallback();
+                    if(timer.numRepetitions > 0)WIZARD.time._callTimer(name);
                 }
             }
         }, timer.time);
@@ -691,7 +647,24 @@ WIZARD.animation = {
         WIZARD.animations[name] = {
             frames: frames,
             frameDuration: frameDuration,
-            currentFrame: 0
+            currentFrame: 0,
+            reset: false
+        }
+    },
+    reset: function(name){
+        var animation =  WIZARD.animations[name];
+        if(animation != null){
+            animation.reset = true;
+        }
+    }
+};
+
+WIZARD.spritesheet = {
+    create: function(name, spriteWidth, spriteHeight){
+        WIZARD.spritesheets[name] = {
+            imgName: name,
+            spriteWidth: spriteWidth,
+            spriteHeight: spriteHeight
         }
     }
 };
@@ -699,7 +672,100 @@ WIZARD.animation = {
 WIZARD.paths = {
     images: "assets/img/",
     sounds: "assets/sound/",
-    data: "assets/data/"
+    data: "assets/data/",
+    setImagesPath: function(path){
+        this.images = path;
+    },
+    setSoundsPath: function(path){
+        this.sounds = path;
+    },
+    setDataPath: function(path){
+        this.data = path;
+    }
+}
+;
+
+WIZARD.utils = {
+    hexToRgb: function(hex){
+        var r = (hex & 0xFF0000) >> 16;
+        var g = (hex & 0x00FF00) >> 8;
+        var b = hex & 0x0000FF;
+        return {r: r, g: g, b: b};
+    },
+    getLanguage: function(){
+        return navigator.language || navigator.userLanguage;
+    }
+};
+
+WIZARD.state = {
+    save: function(key, value){
+        if(key == null || value == null){
+            console.error("Key or value can't be null.");
+            return;
+        }
+        localStorage.setItem(key, value);
+    },
+
+    load: function(key){
+        if(key == null){
+            console.error("Key can't be null.");
+            return;
+        }
+        return localStorage.getItem(key);
+    },
+
+    clear: function(){
+        localStorage.clear();
+    }
+};
+
+WIZARD.sound = {
+
+};
+
+WIZARD.camera = {
+    setPosition: function(x, y){
+        this.x = x;
+        this.y = y;
+    },
+    setRotation: function(rot){
+        this.rot = rot;
+    },
+    x: 0,
+    y: 0,
+    rot: 0
+};
+
+WIZARD.math = {
+    lerp: function(a, b, t){
+        return (a * (1.0 - t)) + (b * t);
+    }
+};
+
+WIZARD.scene = {
+    current: null,
+    scenes: [],
+    create: function(name, data){
+        this.scenes[name] = data;
+    },
+    setCurrent: function(name, delay, wiz){
+        var scene = this.scenes[name];
+        if(this.current != null && this.current.onExit != null){
+            scene.onExit(wiz);
+        }
+        if(delay != null && delay != 0) {
+
+            WIZARD.time.createTimer("sceneTransition", delay, function () {
+                if (scene != null && scene != null) {
+                    this.current = scene;
+                    scene.onEnter(wiz);
+                }
+            }, 1, true);
+        }else{
+            this.current = scene;
+            scene.onEnter(wiz);
+        }
+    },
 };
 
 WIZARD.images = {};
@@ -707,5 +773,6 @@ WIZARD.sounds = {};
 WIZARD.data = {};
 WIZARD.timers = {};
 WIZARD.animations = {};
+WIZARD.spritesheets = {};
 
 window.wizard = WIZARD.core;
