@@ -13,13 +13,13 @@ wizard({
         WIZARD.paths.setSoundsPath("../assets/sound/");
         WIZARD.paths.setDataPath("../assets/data/");
 
-        this.loadImages("wizard.png", "bw.png", "spritesheet.png", "font.png");
+        this.loadImages("wizard.png", "font.png");
         this.loadSounds("sound01.wav");
         this.loadData("a.txt");
 
         WIZARD.spritesheet.create("font", 8, 8);
 
-        WIZARD.spritesheet.create("spritesheet", 32, 32);
+        WIZARD.spritesheet.create("wizard", 32, 32);
 
         WIZARD.animation.createFrameAnimation("wizard_idle", [[0,0], [1,0], [2,0]], 200);
     },
@@ -42,7 +42,7 @@ wizard({
     },
     render: function(){
         this.clear("#686868");
-        this.drawAnimation("spritesheet", "wizard_idle", body.x, body.y);
+        this.drawAnimation("wizard", "wizard_idle", body.x, body.y);
         if(WIZARD.physics.intersects(body, body2)){
             this.drawAABB(body, "#ff0000");
             this.drawAABB(body2, "#ff0000");
