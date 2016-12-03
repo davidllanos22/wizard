@@ -1,6 +1,6 @@
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.2.0";
+WIZARD.version = "0.3.0";
 
 WIZARD.core = function(data){
     var wiz = data || {};
@@ -44,12 +44,28 @@ WIZARD.core = function(data){
     visibilitychange();
 
     document.addEventListener("visibilitychange", visibilitychange);
-
     function visibilitychange(){
         if(document.hidden){
             wiz.actx.suspend();
         }else{
             wiz.actx.resume();
+        }
+    }
+
+    window.addEventListener('resize', resize, true);
+
+    function resize(){
+        if(wiz.fillScreen) {
+            var w = window.innerWidth;
+            var h = window.innerHeight;
+            wiz.width = w / wiz.scale;
+            wiz.height = h / wiz.scale;
+            wiz.canvas.width = w;
+            wiz.canvas.height = h;
+            wiz.glCanvas.width = w;
+            wiz.glCanvas.height = h;
+            wiz.ctx.scale(wiz.scale, wiz.scale);
+            gl.viewport(0, 0, w, h);
         }
     }
 
@@ -896,7 +912,6 @@ WIZARD.map = {
         this.maps[mapName] = mapData;
     },
     loadToScene: function(mapName, sceneName, loader){
-        var scene = WIZARD.scene.scenes[sceneName];
         var map = this.maps[mapName];
 
         for(var layer = 0; layer < map.layers.length; layer++){
