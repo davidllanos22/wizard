@@ -697,27 +697,7 @@ WIZARD.utils = {
     }
 };
 
-WIZARD.state = {
-    save: function(key, value){
-        if(key == null || value == null){
-            console.error("Key or value can't be null.");
-            return;
-        }
-        localStorage.setItem(key, value);
-    },
 
-    load: function(key){
-        if(key == null){
-            console.error("Key can't be null.");
-            return;
-        }
-        return localStorage.getItem(key);
-    },
-
-    clear: function(){
-        localStorage.clear();
-    }
-};
 
 WIZARD.sound = {
 
@@ -831,6 +811,43 @@ WIZARD.component = {
         //si ya está en la entidad no añadir.
 
     },
+};
+
+WIZARD.progress = {
+    data: {},
+    load: function(name){
+        var progress = JSON.parse(this._loadKey(name));
+        if(progress != null){
+            console.log("State loaded.");
+            this.data = progress;
+            return true;
+        }
+        return false;
+    },
+
+    save: function(name){
+        console.log("State saved.");
+        this._saveKey(name, JSON.stringify(this.data));
+    },
+
+    _clear: function(){
+        localStorage.clear();
+    },
+    _saveKey: function(key, value){
+        if(key == null || value == null){
+            console.error("Key or value can't be null.");
+            return;
+        }
+        localStorage.setItem(key, value);
+    },
+
+    _loadKey: function(key){
+        if(key == null){
+            console.error("Key can't be null.");
+            return;
+        }
+        return localStorage.getItem(key);
+    }
 };
 
 WIZARD.images = {};
