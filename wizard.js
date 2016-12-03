@@ -739,6 +739,9 @@ WIZARD.camera = {
 WIZARD.math = {
     lerp: function(a, b, t){
         return (a * (1.0 - t)) + (b * t);
+    },
+    randomBetween: function(min, max){
+        return (Math.random() * max) + min;
     }
 };
 
@@ -788,13 +791,13 @@ WIZARD.entity = {
         //this.sortEntities(list);
     },
 
-    sortEntities: function(list){
+    sort: function(list){
         list.sort(function(a, b){
-            var aa = Math.floor(a.getY());
-            var bb = Math.floor(b.getY());
+            var aa = Math.floor(a.y);
+            var bb = Math.floor(b.y);
             if(aa == bb){
-                aa = Math.floor(a.getX());
-                bb = Math.floor(b.getX());
+                aa = Math.floor(a.x);
+                bb = Math.floor(b.x);
             }
             return aa - bb;
         });
