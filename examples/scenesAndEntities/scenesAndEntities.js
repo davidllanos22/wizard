@@ -19,10 +19,7 @@ var sceneA = {
         wiz.clear("#cc4400");
         wiz.drawText("Entities: " + this.entities.length, 0, 0, "font");
 
-        WIZARD.entity.sort(this.entities);
-        for(var i = 0; i < this.entities.length; i++){
-            this.entities[i].render(wiz);
-        }
+        WIZARD.scene.renderEntitiesAndLayers(this, wiz);
     },
     onExit: function(wiz){
     }

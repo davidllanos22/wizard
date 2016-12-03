@@ -740,35 +740,72 @@ WIZARD.scene = {
 
             WIZARD.time.createTimer("sceneTransition", delay, function () {
                 if (scene != null && scene != null) {
-                    this.current = scene;
+                    WIZARD.scene.current = scene;
                     scene.onEnter(wiz);
                 }
             }, 1, true);
         }else{
-            this.current = scene;
+            WIZARD.scene.current = scene;
             scene.onEnter(wiz);
         }
     },
+    updateEntities: function(scene, wiz){
+        for(var i = 0; i < scene.entities.length; i++){
+            scene.entities[i].update(wiz);
+        }
+    },
+    renderEntitiesAndLayers: function(scene, wiz){
+        if(scene.tiles && scene.tiles["layer0"]) {
+            for (var i = 0; i < scene.tiles["layer0"].length; i++) {
+                scene.tiles["layer0"][i].render(wiz);
+            }
+        }
+
+        if(scene.tiles && scene.tiles["layer1"]) {
+            for (var i = 0; i < scene.tiles["layer1"].length; i++) {
+                scene.tiles["layer1"][i].render(wiz);
+            }
+        }
+
+        WIZARD.entity.sort(scene.entities);
+        for(var i = 0; i < scene.entities.length; i++){
+            scene.entities[i].render(wiz);
+        }
+
+        if(scene.tiles && scene.tiles["layer2"]) {
+            for (var i = 0; i < scene.tiles["layer2"].length; i++) {
+                scene.tiles["layer2"][i].render(wiz);
+            }
+        }
+    }
 };
 
 WIZARD.entity = {
     _idCount: 0,
     _entities: [],
-    create: function(name, data){
-        if(this._entities[name]){
-            console.error("Entity " + name + "already exists.");
+    create: function(entityName, data){
+        if(this._entities[entityName]){
+            console.error("Entity " + entityName + "already exists.");
         }
-        this._entities[name] = data;
+        this._entities[entityName] = data;
     },
-    instantiate: function(name, params){
-        var entity = new this._entities[name](params);
-        WIZARD.scene.current.entities.push(entity);
+    instantiate: function(entityName, params){
+        var list = WIZARD.scene.current.entities;
+        this.instantiateToList(entityName, params, list);
+    },
+    instantiateToScene: function(entityName, params, sceneName){
+        var list = WIZARD.scene.scenes[sceneName].entities;
+        this.instantiateToList(entityName, params, list);
+    },
+
+    instantiateToList: function(entityName, params, list){
+        var entity = new this._entities[entityName](params);
+        list.push(entity);
         entity.id = this._idCount;
         this._idCount++;
         if(entity._onAdded){
             entity._onAdded();
         }
-        //this.sortEntities(list);
     },
 
     sort: function(list){
@@ -847,6 +884,38 @@ WIZARD.progress = {
             return;
         }
         return localStorage.getItem(key);
+    }
+};
+
+WIZARD.map = {
+    maps: [],
+    create: function(mapName, mapData){
+        if(this.maps[mapName]){
+            console.error("Map " + mapName + "already exists.");
+        }
+        this.maps[mapName] = mapData;
+    },
+    loadToScene: function(mapName, sceneName, loader){
+        var scene = WIZARD.scene.scenes[sceneName];
+        var map = this.maps[mapName];
+
+        for(var layer = 0; layer < map.layers.length; layer++){
+            var width =  map.layers[layer].mapWidth;
+
+            for(var j = 0; j < map.layers[layer].data.length; j++){
+                var x = Math.floor(j % width);
+                var y = Math.floor(j / width);
+                var id = map.layers[layer].data[j] - 1;
+
+                var w = map.layers[layer].spriteSheetWidth;
+                var xx = Math.floor(id % w);
+                var yy = Math.floor(id / w);
+
+                if(loader){
+                    loader(id, x, y, xx, yy, layer, sceneName);
+                }
+            }
+        }
     }
 };
 
