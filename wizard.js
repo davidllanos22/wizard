@@ -1,6 +1,6 @@
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.1.0";
+WIZARD.version = "0.2.0";
 
 WIZARD.core = function(data){
     var wiz = data || {};
@@ -243,7 +243,7 @@ WIZARD.core = function(data){
     wiz.drawText = function(text, x, y, font){
         var chars = "ABCDEFGHIJKLMNOP"+
             "QRSTUVWXYZ012345"+
-            "6789!?,.*>      ";
+            "6789!?,.*><:    ";
 
         for(var i = 0; i < text.length; i++){
             for(var j = 0; j < chars.length; j++){
@@ -772,6 +772,9 @@ WIZARD.entity = {
     _idCount: 0,
     _entities: [],
     create: function(name, data){
+        if(this._entities[name]){
+            console.error("Entity " + name + "already exists.");
+        }
         this._entities[name] = data;
     },
     instantiate: function(name, params){
@@ -824,24 +827,6 @@ WIZARD.component = {
         }
         //si ya está en la entidad no añadir.
 
-    },
-    setCurrent: function(name, delay, wiz){
-        var scene = this.scenes[name];
-        if(this.current != null && this.current.onExit != null){
-            scene.onExit(wiz);
-        }
-        if(delay != null && delay != 0) {
-
-            WIZARD.time.createTimer("sceneTransition", delay, function () {
-                if (scene != null && scene != null) {
-                    this.current = scene;
-                    scene.onEnter(wiz);
-                }
-            }, 1, true);
-        }else{
-            this.current = scene;
-            scene.onEnter(wiz);
-        }
     },
 };
 
