@@ -768,6 +768,83 @@ WIZARD.scene = {
     },
 };
 
+WIZARD.entity = {
+    _idCount: 0,
+    _entities: [],
+    create: function(name, data){
+        this._entities[name] = data;
+    },
+    instantiate: function(name, params){
+        var entity = new this._entities[name](params);
+        WIZARD.scene.current.entities.push(entity);
+        entity.id = this._idCount;
+        this._idCount++;
+        if(entity._onAdded){
+            entity._onAdded();
+        }
+        //this.sortEntities(list);
+    },
+
+    sortEntities: function(list){
+        list.sort(function(a, b){
+            var aa = Math.floor(a.getY());
+            var bb = Math.floor(b.getY());
+            if(aa == bb){
+                aa = Math.floor(a.getX());
+                bb = Math.floor(b.getX());
+            }
+            return aa - bb;
+        });
+    },
+
+    remove: function(entity, list){
+        var index = -1;
+        for(var i = 0; i < list.length; i++){
+            if(list[i].id == entity){
+                index = i;
+                break;
+            }
+        }
+        if(index != -1)list.splice(index, 1);
+    },
+};
+
+WIZARD.component = {
+    components: [],
+    create: function(name, data){
+        if(this.components[name]){
+            console.error("Component " + name + "already exists.");
+        }
+        this.components[name] = data;
+    },
+    add: function(name, entity){
+        var component = this.components[name];
+        if(entity.components[name]){
+            console.error("Component " + name + "already added to entity " + entity.name);
+        }
+        //si ya está en la entidad no añadir.
+
+    },
+    setCurrent: function(name, delay, wiz){
+        var scene = this.scenes[name];
+        if(this.current != null && this.current.onExit != null){
+            scene.onExit(wiz);
+        }
+        if(delay != null && delay != 0) {
+
+            WIZARD.time.createTimer("sceneTransition", delay, function () {
+                if (scene != null && scene != null) {
+                    this.current = scene;
+                    scene.onEnter(wiz);
+                }
+            }, 1, true);
+        }else{
+            this.current = scene;
+            scene.onEnter(wiz);
+        }
+    },
+};
+
 WIZARD.images = {};
 WIZARD.sounds = {};
 WIZARD.data = {};
