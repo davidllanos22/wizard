@@ -74,9 +74,6 @@ WIZARD.core = function(data){
                 wiz.initialWidth = wiz.width;
                 wiz.initialHeight = wiz.height;
                 wiz.initialScale = wiz.scale || 1;
-                console.log(wiz.initialWidth);
-                console.log(wiz.initialHeight);
-                console.log(wiz.initialScale);
             }
 
             var finalWidth, finalHeight, finalScale, ratioW, ratioH;
@@ -92,7 +89,6 @@ WIZARD.core = function(data){
                 finalHeight = wiz.initialHeight;
                 finalScale = ratioH;
             }else if(!wiz.initialWidth && !wiz.initialHeight){
-                console.log("?");
                 finalWidth = windowWidth / wiz.initialScale;
                 finalHeight = windowHeight / wiz.initialScale;
                 finalScale = wiz.initialScale;
@@ -257,6 +253,10 @@ WIZARD.core = function(data){
         WIZARD.loader.loadData(arguments);
     };
 
+    wiz.loadBitmapFont = function(){
+        WIZARD.loader.loadBitmapFont(arguments);
+    };
+
     /** RENDER **/
 
     // Clears the screen.
@@ -328,6 +328,35 @@ WIZARD.core = function(data){
                     wiz.drawSprite(font, x + (i * spriteWidth), y, xx, yy);
                 }
             }
+        }
+    };
+
+    wiz.drawBitmapText = function(text, x, y, fontName){
+        var fontData = WIZARD.bitmapFonts[fontName];
+        var fontImage = WIZARD.images[fontName];
+
+        var xAcum = x;
+        var yAcum = y;
+
+        for(var i = 0; i < text.length; i++) {
+            var id = text.charCodeAt(i);
+            if(id == 10){
+                xAcum = x;
+                yAcum += fontData.lineHeight;
+                continue;
+            }
+            var spriteX = fontData.chars.get(id).x;
+            var spriteY = fontData.chars.get(id).y;
+            var spriteW = fontData.chars.get(id).width;
+            var spriteH = fontData.chars.get(id).height;
+            var xOffset = fontData.chars.get(id).xOffset;
+            var yOffset = fontData.chars.get(id).yOffset;
+            var xAdvance = fontData.chars.get(id).xAdvance;
+
+            wiz.ctx.drawImage(fontImage, spriteX, spriteY, spriteW, spriteH, xAcum + xOffset, yAcum + yOffset, spriteW, spriteH);
+            xAcum += xAdvance;
+
+            //y += spriteH + yOffset;
         }
     };
 
@@ -577,6 +606,8 @@ WIZARD.loader = {
             this._loadSound(path);
         }else if(type == "data"){
             this._loadData(path);
+        }else if(type == "bitmapFont"){
+            this._loadBitmapFont(path);
         }
     },
 
@@ -589,6 +620,14 @@ WIZARD.loader = {
         this.totalFilesToLoad += paths.length;
         for (var i = 0; i < paths.length; i++) {
             this._loadFileOfType(paths[i], "image");
+        }
+    },
+
+    loadBitmapFont: function(paths){
+        console.log("Loading fonts...");
+        this.totalFilesToLoad += paths.length;
+        for (var i = 0; i < paths.length; i++) {
+            this._loadFileOfType(paths[i], "bitmapFont");
         }
     },
 
@@ -664,7 +703,56 @@ WIZARD.loader = {
             }
         };
         req.send();
+    },
+
+    _loadBitmapFont: function(path){
+        var req = new XMLHttpRequest();
+        req.open("GET",  WIZARD.paths.data + path, true);
+
+        req.onreadystatechange = function(){
+            if (req.readyState == 4) {
+                console.log("Font file loaded: " + path);
+                var name = path.substr(0, path.lastIndexOf('.'));
+
+                if (window.DOMParser){
+                    var parser = new DOMParser();
+                    var xmlDoc = parser.parseFromString(req.responseText, "text/xml");
+
+                    var chars = xmlDoc.getElementsByTagName("chars")[0];
+                    var count = chars.getAttribute("count");
+
+                    WIZARD.bitmapFonts[name] = {};
+                    WIZARD.bitmapFonts[name].chars = new Map();
+                    WIZARD.bitmapFonts[name].lineHeight = parseInt(xmlDoc.getElementsByTagName("common")[0].getAttribute("lineHeight"));
+
+                    for(var i = 0; i < count; i++){
+                        var char = chars.getElementsByTagName("char")[i];
+                        var id = parseInt(char.getAttribute("id"));
+
+                        var o = {
+                            id: id,
+                            x: parseInt(char.getAttribute("x")),
+                            y: parseInt(char.getAttribute("y")),
+                            width: parseInt(char.getAttribute("width")),
+                            height: parseInt(char.getAttribute("height")),
+                            xOffset: parseInt(char.getAttribute("xoffset")),
+                            yOffset: parseInt(char.getAttribute("yoffset")),
+                            xAdvance: parseInt(char.getAttribute("xadvance"))
+                        };
+
+                        WIZARD.bitmapFonts[name].chars.set(id, o);
+                    }
+                }
+
+                WIZARD.loader.totalFilesToLoad--;
+                if(WIZARD.loader.totalFilesToLoad == 0){
+                    WIZARD.loader.wiz.ready();
+                }
+            }
+        };
+        req.send();
     }
+
 };
 
 WIZARD.shader = {
@@ -839,12 +927,6 @@ WIZARD.utils = {
     getLanguage: function(){
         return navigator.language || navigator.userLanguage;
     }
-};
-
-
-
-WIZARD.sound = {
-
 };
 
 WIZARD.camera = {
@@ -1070,6 +1152,7 @@ WIZARD.map = {
 WIZARD.images = {};
 WIZARD.sounds = {};
 WIZARD.data = {};
+WIZARD.bitmapFonts = {};
 WIZARD.timers = {};
 WIZARD.animations = {};
 WIZARD.spritesheets = {};
