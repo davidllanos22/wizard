@@ -1,9 +1,16 @@
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.3.0";
+WIZARD.version = "0.4.0";
 
 WIZARD.core = function(data){
     var wiz = data || {};
+
+    if(!wiz.fillScreen && (!wiz.width || !wiz.height)){
+        console.error("[WIZARD - ERROR]: Width and Height required.");
+        return;
+    }
+
+    wiz.scale = wiz.scale || 1;
 
     var pixelRatio = 1;
 
@@ -39,32 +46,78 @@ WIZARD.core = function(data){
     wiz.ctx = wiz.canvas.getContext("2d");
     wiz.gl = wiz.glCanvas.getContext("webgl");
 
-    // Create audio context
-    wiz.actx = new AudioContext();
-    visibilitychange();
+    //Create audio context
+    try {
+        wiz.actx = new AudioContext();
+        visibilitychange();
 
-    document.addEventListener("visibilitychange", visibilitychange);
-    function visibilitychange(){
-        if(document.hidden){
-            wiz.actx.suspend();
-        }else{
-            wiz.actx.resume();
+        document.addEventListener("visibilitychange", visibilitychange);
+        function visibilitychange() {
+            if (document.hidden) {
+                wiz.actx.suspend();
+            } else {
+                wiz.actx.resume();
+            }
         }
+    }catch(e){
+        console.error("[WIZARD - ERROR]: AudioContext not available.");
     }
 
     window.addEventListener('resize', resize, true);
 
     function resize(){
         if(wiz.fillScreen) {
-            var w = window.innerWidth;
-            var h = window.innerHeight;
-            wiz.width = w / wiz.scale;
-            wiz.height = h / wiz.scale;
+            var windowWidth = window.innerWidth;
+            var windowHeight = window.innerHeight;
+
+            if(!wiz.initialScale) {
+                wiz.initialWidth = wiz.width;
+                wiz.initialHeight = wiz.height;
+                wiz.initialScale = wiz.scale || 1;
+                console.log(wiz.initialWidth);
+                console.log(wiz.initialHeight);
+                console.log(wiz.initialScale);
+            }
+
+            var finalWidth, finalHeight, finalScale, ratioW, ratioH;
+
+            if(wiz.initialWidth && !wiz.initialHeight){
+                ratioW = windowWidth / wiz.initialWidth;
+                finalWidth = wiz.initialWidth;
+                finalHeight = windowHeight / ratioW;
+                finalScale = ratioW;
+            }else if(!wiz.initialWidth && wiz.initialHeight){
+                ratioH = windowHeight / wiz.initialHeight;
+                finalWidth = windowWidth / ratioH;
+                finalHeight = wiz.initialHeight;
+                finalScale = ratioH;
+            }else if(!wiz.initialWidth && !wiz.initialHeight){
+                console.log("?");
+                finalWidth = windowWidth / wiz.initialScale;
+                finalHeight = windowHeight / wiz.initialScale;
+                finalScale = wiz.initialScale;
+            }else if(wiz.initialWidth && wiz.initialHeight){
+                ratioW = windowWidth / wiz.initialWidth;
+                finalWidth = wiz.initialWidth;
+                finalHeight = wiz.initialHeight;
+                finalScale = ratioW;
+            }
+
+            wiz.width = finalWidth;
+            wiz.height = finalHeight;
+            wiz.scale = finalScale;
+
+            var w = Math.min(wiz.width * pixelRatio * wiz.scale, windowWidth);
+            var h = Math.min(wiz.height * pixelRatio * wiz.scale, windowHeight);
+
             wiz.canvas.width = w;
             wiz.canvas.height = h;
+
             wiz.glCanvas.width = w;
             wiz.glCanvas.height = h;
+
             wiz.ctx.scale(wiz.scale, wiz.scale);
+
             gl.viewport(0, 0, w, h);
         }
     }
@@ -129,6 +182,7 @@ WIZARD.core = function(data){
 
     // Called when assets are ready.
     function ready(){
+        resize();
         loop();
     }
 
@@ -265,15 +319,20 @@ WIZARD.core = function(data){
             for(var j = 0; j < chars.length; j++){
                 var char = text.charAt(i);
                 if(chars.charAt(j) == char.toUpperCase()){
-                    var xx = j % 16;
-                    var yy = Math.floor(j/16);
-                    wiz.drawSprite(font, x + (i * 8), y, xx, yy);
+                    var spritesheet = WIZARD.spritesheets[font];
+                    var img = WIZARD.images[spritesheet.imgName];
+                    var spriteWidth = spritesheet.spriteWidth;
+                    var numSprites = img.width / spriteWidth;
+                    var xx = j % numSprites;
+                    var yy = Math.floor(j/numSprites);
+                    wiz.drawSprite(font, x + (i * spriteWidth), y, xx, yy);
                 }
             }
         }
     };
 
     wiz.playSound = function(soundName, loop){
+        if(!wiz.actx) return;
         var sound = WIZARD.sounds[soundName];
         var source = wiz.actx.createBufferSource();
         source.buffer = sound;
@@ -409,6 +468,11 @@ WIZARD.input = {
     wiz: null,
     kP: {},
     kJP: {},
+    mP:{},
+    mJP: {},
+    mR: {},
+    x: 0,
+    y: 0,
 
     _init: function(wiz){
         this.wiz = wiz;
@@ -424,6 +488,42 @@ WIZARD.input = {
             delete WIZARD.input.kP[e.keyCode];
             delete WIZARD.input.kJP[e.keyCode];
         };
+
+        window.onmousemove = function(e){
+            WIZARD.input.x = e.x;
+            WIZARD.input.y = e.y;
+        };
+
+        window.onmousedown = function(e){
+            WIZARD.input.mP[e.button] = true;
+            if(WIZARD.input.mJP[e.button] != 0)WIZARD.input.mJP[e.button] = true;
+        };
+
+        window.onmouseup = function(e){
+            delete WIZARD.input.mP[e.button];
+            delete WIZARD.input.mJP[e.button];
+            WIZARD.input.mR[e.button] = true;
+        };
+
+        window.addEventListener("touchmove", function(e){
+            e.preventDefault();
+            WIZARD.input.x = e.changedTouches[0].pageX;
+            WIZARD.input.y = e.changedTouches[0].pageY;
+        }, false);
+
+        window.addEventListener("touchstart", function(e){
+            WIZARD.input.mP[0] = true;
+            if(WIZARD.input.mJP[0] != 0)WIZARD.input.mJP[0] = true;
+        }, false);
+
+        window.addEventListener("touchend", function(e){
+            delete WIZARD.input.mP[0];
+            delete WIZARD.input.mJP[0];
+            WIZARD.input.mR[0] = true;
+            WIZARD.input.x = 0;
+            WIZARD.input.y = 0;
+        }, false);
+
     },
 
     keyPressed: function(key){
@@ -433,6 +533,27 @@ WIZARD.input = {
     keyJustPressed: function(key){
         if(this.kJP[key]){
             this.kJP[key] = 0;
+            return true;
+        }else{
+            return false;
+        }
+    },
+
+    mousePressed: function(button){
+        return this.mP[button];
+    },
+
+    mouseJustPressed: function(button){
+        if(this.mJP[button]){
+            this.mJP[button] = 0;
+            return true;
+        }else{
+            return false;
+        }
+    },
+    mouseJustReleased: function(button){
+        if(this.mR[button]){
+            this.mR[button] = 0;
             return true;
         }else{
             return false;
@@ -507,6 +628,13 @@ WIZARD.loader = {
         req.responseType = 'arraybuffer';
 
         req.onload = function(){
+            if(!WIZARD.loader.wiz.actx){
+                WIZARD.loader.totalFilesToLoad--;
+                if(WIZARD.loader.totalFilesToLoad == 0){
+                    WIZARD.loader.wiz.ready();
+                }
+                return;
+            }
             WIZARD.loader.wiz.actx.decodeAudioData(req.response, function(audio){
                 console.log("Audio file loaded: " + path);
                 var name = path.substr(0, path.lastIndexOf('.'));
@@ -738,6 +866,9 @@ WIZARD.math = {
     },
     randomBetween: function(min, max){
         return (Math.random() * max) + min;
+    },
+    angleBetween: function(a, b){
+        return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
     }
 };
 
@@ -746,6 +877,7 @@ WIZARD.scene = {
     scenes: [],
     create: function(name, data){
         this.scenes[name] = data;
+        this.scenes[name].name = name;
     },
     setCurrent: function(name, delay, wiz){
         var scene = this.scenes[name];
@@ -807,11 +939,11 @@ WIZARD.entity = {
     },
     instantiate: function(entityName, params){
         var list = WIZARD.scene.current.entities;
-        this.instantiateToList(entityName, params, list);
+        return this.instantiateToList(entityName, params, list);
     },
     instantiateToScene: function(entityName, params, sceneName){
         var list = WIZARD.scene.scenes[sceneName].entities;
-        this.instantiateToList(entityName, params, list);
+        return this.instantiateToList(entityName, params, list);
     },
 
     instantiateToList: function(entityName, params, list){
@@ -822,6 +954,7 @@ WIZARD.entity = {
         if(entity._onAdded){
             entity._onAdded();
         }
+        return entity;
     },
 
     sort: function(list){

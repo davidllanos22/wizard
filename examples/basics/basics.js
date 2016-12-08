@@ -2,6 +2,7 @@ var body = WIZARD.physics.createAABB(32, 48, 32, 32);
 var body2 = WIZARD.physics.createAABB(160 - 64, 48, 32, 32);
 
 var speed = 0.2;
+var intersects = false;
 
 wizard({
     width: 200,
@@ -52,6 +53,14 @@ wizard({
             moved = true;
         }
 
+        var iTemp = WIZARD.physics.intersects(body, body2);
+
+        if(!intersects && iTemp){
+           this.playSound("sound01");
+        }
+
+        intersects = iTemp;
+
         if(moved) {
             WIZARD.progress.data.x = body.x;
             WIZARD.progress.data.y = body.y;
@@ -61,7 +70,8 @@ wizard({
     render: function(){
         this.clear("#686868");
         this.drawAnimation("wizard", "wizard_idle", body.x, body.y);
-        if(WIZARD.physics.intersects(body, body2)){
+
+        if(intersects){
             this.drawAABB(body, "#ff0000");
             this.drawAABB(body2, "#ff0000");
         }else{
