@@ -60,7 +60,7 @@ WIZARD.core = function(data){
             }
         }
     }catch(e){
-        console.error("[WIZARD - ERROR]: AudioContext not available.");
+        console.warn("[WIZARD - ERROR]: AudioContext not available.");
     }
 
     window.addEventListener('resize', resize, true);
@@ -493,6 +493,23 @@ WIZARD.keys = {
     NUM_LOCK: 144
 };
 
+WIZARD.gamepad = {
+    BUTTON_0: 0,
+    BUTTON_1: 1,
+    BUTTON_2: 2,
+    BUTTON_3: 3,
+    BUTTON_4: 4,
+    BUTTON_5: 5,
+    BUTTON_6: 6,
+    BUTTON_7: 7,
+    BUTTON_8: 8,
+    BUTTON_9: 9,
+    UP: 10,
+    DOWN: 11,
+    LEFT: 12,
+    RIGHT: 13
+};
+
 WIZARD.input = {
     wiz: null,
     kP: {},
@@ -502,7 +519,7 @@ WIZARD.input = {
     mR: {},
     x: 0,
     y: 0,
-
+    _gamepadsLastState: null,
     _init: function(wiz){
         this.wiz = wiz;
         window.onkeydown = function(e){
@@ -552,7 +569,6 @@ WIZARD.input = {
             WIZARD.input.x = 0;
             WIZARD.input.y = 0;
         }, false);
-
     },
 
     keyPressed: function(key){
@@ -587,8 +603,83 @@ WIZARD.input = {
         }else{
             return false;
         }
-    }
+    },
 
+    _getGamepads: function(){
+        try {
+            if (navigator.getGamepads) return navigator.getGamepads();
+            if (navigator.webkitGetGamepads)return navigator.webkitGetGamepads();
+            if (navigator.webkitGamepads) return navigator.webkitGamepads();
+        }catch(e){
+            console.log("[WIZARD - ERROR]: Gamepad not supported.");
+        }
+    },
+
+    _gamepadPressed: function(gamepads, index, button){
+        var pressed = false;
+        if(!gamepads || gamepads.length == 0) return false;
+
+        var current = gamepads[index];
+        if(!current) return false;
+
+        var deadZone = 0.25;
+
+        if(button >= 10){
+            if(button == WIZARD.gamepad.UP){
+                pressed = current.axes[1] < -deadZone || current.axes[5] < -deadZone;
+            }
+            else if(button == WIZARD.gamepad.DOWN){
+                pressed = current.axes[1] > deadZone || current.axes[5] > deadZone;
+            }
+            else if(button == WIZARD.gamepad.LEFT){
+                pressed = current.axes[0] < -deadZone || current.axes[4] < -deadZone;
+            }
+            else if(button == WIZARD.gamepad.RIGHT){
+                pressed = current.axes[0] > deadZone || current.axes[4] > deadZone;
+            }
+        }else{
+            pressed = current.buttons[button].pressed;
+        }
+        return pressed;
+    },
+
+    _createGamepadLastState: function(){
+        var gamepads = this._getGamepads();
+        var lastState = [];
+        for(var i = 0; i < gamepads.length; i++){
+            var gamepad = [];
+            for(var j = 0; j <= 13; j++){
+                var state = this._gamepadPressed(gamepads, i, j);
+                gamepad.push(state);
+            }
+            lastState.push(gamepad);
+        }
+        return lastState;
+    },
+
+    _checkGamepadLastState: function(index, button){
+        if(!this._gamepadsLastState ) return false;
+        var gamepad = this._gamepadsLastState[index];
+        var state = gamepad && gamepad[button];
+        return state;
+    },
+
+    gamepadPressed: function(index, button){
+        var gamepads = this._getGamepads();
+        if(!gamepads) return;
+        return this._gamepadPressed(gamepads, index, button);
+    },
+
+    gamepadJustPressed: function(index, button){
+        var gamepads = this._getGamepads();
+        if(!gamepads) return;
+        var pressed = this._gamepadPressed(gamepads, index, button);
+        var pressedLastState = this._checkGamepadLastState(index, button);
+
+        this._gamepadsLastState = this._createGamepadLastState();
+
+        return !pressedLastState && pressed;
+    }
 };
 
 WIZARD.loader = {
