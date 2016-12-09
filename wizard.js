@@ -1,12 +1,12 @@
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.4.0";
+WIZARD.version = "0.5.0";
 
 WIZARD.core = function(data){
     var wiz = data || {};
 
     if(!wiz.fillScreen && (!wiz.width || !wiz.height)){
-        console.error("[WIZARD - ERROR]: Width and Height required.");
+        WIZARD.console.error("Width and Height required.");
         return;
     }
 
@@ -60,7 +60,7 @@ WIZARD.core = function(data){
             }
         }
     }catch(e){
-        console.warn("[WIZARD - ERROR]: AudioContext not available.");
+        WIZARD.console.warn("AudioContext not available.");
     }
 
     window.addEventListener('resize', resize, true);
@@ -178,6 +178,7 @@ WIZARD.core = function(data){
 
     // Called when assets are ready.
     function ready(){
+        WIZARD.console.log("WIZARD " + WIZARD.version + " ready to use.");
         resize();
         loop();
     }
@@ -611,7 +612,7 @@ WIZARD.input = {
             if (navigator.webkitGetGamepads)return navigator.webkitGetGamepads();
             if (navigator.webkitGamepads) return navigator.webkitGamepads();
         }catch(e){
-            console.log("[WIZARD - ERROR]: Gamepad not supported.");
+            WIZARD.console.error("Gamepad not supported.");
         }
     },
 
@@ -707,7 +708,7 @@ WIZARD.loader = {
     },
 
     loadImages: function(paths){
-        console.log("Loading images...");
+        WIZARD.console.log("Loading images...");
         this.totalFilesToLoad += paths.length;
         for (var i = 0; i < paths.length; i++) {
             this._loadFileOfType(paths[i], "image");
@@ -715,7 +716,7 @@ WIZARD.loader = {
     },
 
     loadBitmapFont: function(paths){
-        console.log("Loading fonts...");
+        WIZARD.console.log("Loading fonts...");
         this.totalFilesToLoad += paths.length;
         for (var i = 0; i < paths.length; i++) {
             this._loadFileOfType(paths[i], "bitmapFont");
@@ -723,7 +724,7 @@ WIZARD.loader = {
     },
 
     loadSounds: function(paths){
-        console.log("Loading sounds...");
+        WIZARD.console.log("Loading sounds...");
         this.totalFilesToLoad += paths.length;
         for (var i = 0; i < paths.length; i++) {
             this._loadFileOfType(paths[i], "sound");
@@ -731,7 +732,7 @@ WIZARD.loader = {
     },
 
     loadData: function(paths){
-        console.log("Loading data...");
+        WIZARD.console.log("Loading data...");
         this.totalFilesToLoad += paths.length;
         for (var i = 0; i < paths.length; i++) {
             this._loadFileOfType(paths[i], "data");
@@ -741,7 +742,7 @@ WIZARD.loader = {
     _loadImage: function(path){
         var image = new Image();
         image.onload = function(){
-            console.log("Image file loaded: " + path);
+            WIZARD.console.log("Image file loaded: " + path);
             var name = path.substr(0, path.lastIndexOf('.'));
             WIZARD.images[name] = image;
             WIZARD.loader.totalFilesToLoad--;
@@ -766,7 +767,7 @@ WIZARD.loader = {
                 return;
             }
             WIZARD.loader.wiz.actx.decodeAudioData(req.response, function(audio){
-                console.log("Audio file loaded: " + path);
+                WIZARD.console.log("Audio file loaded: " + path);
                 var name = path.substr(0, path.lastIndexOf('.'));
                 WIZARD.sounds[name] = audio;
                 WIZARD.loader.totalFilesToLoad--;
@@ -784,7 +785,7 @@ WIZARD.loader = {
 
         req.onreadystatechange = function(){
             if (req.readyState == 4) {
-                console.log("Data file loaded: " + path);
+                WIZARD.console.log("Data file loaded: " + path);
                 var name = path.substr(0, path.lastIndexOf('.'));
                 WIZARD.data[name] = req.responseText;
                 WIZARD.loader.totalFilesToLoad--;
@@ -802,7 +803,7 @@ WIZARD.loader = {
 
         req.onreadystatechange = function(){
             if (req.readyState == 4) {
-                console.log("Font file loaded: " + path);
+                WIZARD.console.log("Font file loaded: " + path);
                 var name = path.substr(0, path.lastIndexOf('.'));
 
                 if (window.DOMParser){
@@ -1106,7 +1107,7 @@ WIZARD.entity = {
     _entities: [],
     create: function(entityName, data){
         if(this._entities[entityName]){
-            console.error("Entity " + entityName + "already exists.");
+            WIZARD.console.error("Entity " + entityName + "already exists.");
         }
         this._entities[entityName] = data;
     },
@@ -1158,14 +1159,14 @@ WIZARD.component = {
     components: [],
     create: function(name, data){
         if(this.components[name]){
-            console.error("Component " + name + "already exists.");
+            WIZARD.console.error("Component " + name + "already exists.");
         }
         this.components[name] = data;
     },
     add: function(name, entity){
         var component = this.components[name];
         if(entity.components[name]){
-            console.error("Component " + name + "already added to entity " + entity.name);
+            WIZARD.console.error("Component " + name + "already added to entity " + entity.name);
         }
         //si ya está en la entidad no añadir.
 
@@ -1177,7 +1178,7 @@ WIZARD.progress = {
     load: function(name){
         var progress = JSON.parse(this._loadKey(name));
         if(progress != null){
-            console.log("State loaded.");
+            WIZARD.console.log("State loaded.");
             this.data = progress;
             return true;
         }
@@ -1185,7 +1186,7 @@ WIZARD.progress = {
     },
 
     save: function(name){
-        console.log("State saved.");
+        WIZARD.console.log("State saved.");
         this._saveKey(name, JSON.stringify(this.data));
     },
 
@@ -1194,7 +1195,7 @@ WIZARD.progress = {
     },
     _saveKey: function(key, value){
         if(key == null || value == null){
-            console.error("Key or value can't be null.");
+            WIZARD.console.error("Key or value can't be null.");
             return;
         }
         localStorage.setItem(key, value);
@@ -1202,7 +1203,7 @@ WIZARD.progress = {
 
     _loadKey: function(key){
         if(key == null){
-            console.error("Key can't be null.");
+            WIZARD.console.error("Key can't be null.");
             return;
         }
         return localStorage.getItem(key);
@@ -1213,7 +1214,7 @@ WIZARD.map = {
     maps: [],
     create: function(mapName, mapData){
         if(this.maps[mapName]){
-            console.error("Map " + mapName + "already exists.");
+            WIZARD.console.error("Map " + mapName + "already exists.");
         }
         this.maps[mapName] = mapData;
     },
@@ -1238,6 +1239,39 @@ WIZARD.map = {
             }
         }
     }
+};
+
+WIZARD.console = {
+    _print: function(message, mode){
+
+        var color = "#FFF";
+        var header = "[WIZARD]: ";
+
+        if(mode == "error"){
+            color = "#ff4755";
+            header = "[WIZARD - ERROR]: "
+        }
+        if(mode == "log"){
+            color = "#00e8ac";
+            header = "[WIZARD - LOG]: "
+        }
+        if(mode == "warn"){
+            color = "#ffbc5b";
+            header = "[WIZARD - WARN]: "
+        }
+        console.log("%c" + header + message, "background: #222; color:" + color + ";");
+    },
+    error: function(message){
+        this._print(message, "error");
+    },
+    log: function(message){
+        this._print(message, "log");
+    },
+
+    warn: function(message){
+        this._print(message, "warn");
+    }
+
 };
 
 WIZARD.images = {};
