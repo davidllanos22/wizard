@@ -1,6 +1,6 @@
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.5.0";
+WIZARD.version = "0.6.0";
 
 WIZARD.core = function(data){
     var wiz = data || {};
@@ -132,8 +132,7 @@ WIZARD.core = function(data){
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
 
-    wiz.currentProgram = WIZARD.shader.create(gl, normal_vs, normal_fs);
-    wiz.canvasTexture = WIZARD.shader.createTexture();
+
 
     // Add the canvas to the DOM.
     //document.body.appendChild(wiz.canvas);
@@ -206,9 +205,10 @@ WIZARD.core = function(data){
 
     // Render the canvas2D to a WebGL canvas
     function renderCanvasToWebGL(canvas){
-        gl.useProgram(wiz.currentProgram);
+        var name = WIZARD.shader.current.name;
+        gl.useProgram(WIZARD.shader.current.program);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, WIZARD.shader.getBuffer("pos"));
+        gl.bindBuffer(gl.ARRAY_BUFFER, WIZARD.shader.getBuffer(name, "pos"));
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             0.0,  0.0,
             1.0,  0.0,
@@ -217,13 +217,13 @@ WIZARD.core = function(data){
             1.0,  0.0,
             1.0,  1.0]), gl.STATIC_DRAW);
 
-        gl.enableVertexAttribArray(WIZARD.shader.getAttribute("a_position"));
-        gl.vertexAttribPointer(WIZARD.shader.getAttribute("a_position"), 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(WIZARD.shader.getAttribute(name, "a_position"));
+        gl.vertexAttribPointer(WIZARD.shader.getAttribute(name, "a_position"), 2, gl.FLOAT, false, 0, 0);
 
         gl.bindTexture(gl.TEXTURE_2D, wiz.canvasTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
 
-        gl.uniform1i(WIZARD.shader.getUniform("u_image"), wiz.canvasTexture);
+        gl.uniform1i(WIZARD.shader.getUniform(name, "u_image"), wiz.canvasTexture);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -232,11 +232,13 @@ WIZARD.core = function(data){
     wiz.play = create;
     wiz.ready = ready;
 
-    /** INPUT **/
     WIZARD.input._init(wiz);
-
-    /** LOAD **/
     WIZARD.loader._init(wiz);
+    WIZARD.shader._init(wiz);
+
+    WIZARD.shader.create("default", normal_vs, normal_fs);
+    WIZARD.shader.setCurrent("default");
+    wiz.canvasTexture = WIZARD.shader.createTexture();
 
     wiz.loadImages = function(){
         WIZARD.loader.loadImages(arguments);
@@ -848,65 +850,85 @@ WIZARD.loader = {
 };
 
 WIZARD.shader = {
-    buffers: new Map(),
-    locations: new Map(),
+    shaders: new Map(),
     gl: null,
-    program: null,
-    create: function(gl, vsCode, fsCode){
-        this.gl = gl;
-        //Create the default shader
-        var vs = this._createShader(gl.VERTEX_SHADER, vsCode);
-        var fs = this._createShader(gl.FRAGMENT_SHADER, fsCode);
-        program = this._createProgram(vs, fs);
+    current: null,
+
+    _init: function(wiz){
+        this.gl = wiz.gl;
+
+    },
+    create: function(name, vsCode, fsCode){
+        var vs = this._createShader(this.gl.VERTEX_SHADER, vsCode);
+        var fs = this._createShader(this.gl.FRAGMENT_SHADER, fsCode);
+
+        var program = this._createProgram(vs, fs);
+
+        var shader = {
+            name: name,
+            program: program,
+            buffers: new Map(),
+            locations: new Map()
+        };
+
+        this.shaders.set(name, shader);
 
         // console.log(gl.getShaderInfoLog(vs));
         // console.log(gl.getShaderInfoLog(fs));
         // console.log(gl.getProgramParameter(program, gl.LINK_STATUS));
         // console.log(gl.getProgramInfoLog(program));
-        return program;
+        return shader;
     },
 
-    createTexture:function(gl){
-        var texture = this.gl.createTexture();
-        this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+    setCurrent: function(name){
+        this.current = this.shaders.get(name);
+    },
+
+    createTexture:function(){
+        var gl = this.gl;
+        var texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         return texture;
     },
 
-    getBuffer: function(){
-        if(this.buffers.has(name)){
-            return this.buffers.get(name);
+    getBuffer: function(shaderName, bufferName){
+        var shader = this.shaders.get(shaderName);
+        if(shader.buffers.has(bufferName)){
+            return shader.buffers.get(bufferName);
         }
         else{
-            this.buffers.set(name, this.gl.createBuffer());
-            return this.getBuffer(name);
+            shader.buffers.set(bufferName, this.gl.createBuffer());
+            return this.getBuffer(shaderName, bufferName);
         }
     },
 
-    getUniform: function(name){
-        if(this.locations.has(name)){
-            return this.locations.get(name);
+    getUniform: function(shaderName, uniformName){
+        var shader = this.shaders.get(shaderName);
+        if(shader.locations.has(uniformName)){
+            return shader.locations.get(uniformName);
         }
         else{
-            this.gl.useProgram(program);
-            var a = this.gl.getUniformLocation(program, name);
-            this.locations.set(name, a);
-            return this.locations.get(name);
+            this.gl.useProgram(shader.program);
+            var a = this.gl.getUniformLocation(shader.program, uniformName);
+            shader.locations.set(uniformName, a);
+            return shader.locations.get(uniformName);
         }
     },
 
-    getAttribute: function(name){
-        if(this.locations.has(name)){
-            return this.locations.get(name);
+    getAttribute: function(shaderName, attributeName){
+        var shader = this.shaders.get(shaderName);
+        if(shader.locations.has(attributeName)){
+            return shader.locations.get(attributeName);
         }
         else{
-            this.gl.useProgram(program);
-            var a = this.gl.getAttribLocation(program, name);
-            this.locations.set(name, a);
-            return this.locations.get(name);
+            this.gl.useProgram(shader.program);
+            var a = this.gl.getAttribLocation(shader.program, attributeName);
+            shader.locations.set(attributeName, a);
+            return shader.locations.get(attributeName);
         }
     },
 
