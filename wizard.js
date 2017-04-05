@@ -1,6 +1,11 @@
+/*
+* - AudioContext not working on ios
+* */
+
+
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.6.0";
+WIZARD.version = "0.6.1";
 
 WIZARD.core = function(data){
     var wiz = data || {};
@@ -1145,6 +1150,7 @@ WIZARD.entity = {
     instantiateToList: function(entityName, params, list){
         var entity = new this._entities[entityName](params);
         list.push(entity);
+        entity.name = entityName;
         entity.id = this._idCount;
         this._idCount++;
         if(entity._onAdded){
