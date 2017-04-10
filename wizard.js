@@ -2,10 +2,9 @@
 * - AudioContext not working on ios
 * */
 
-
 var WIZARD = WIZARD || {};
 
-WIZARD.version = "0.6.1";
+WIZARD.version = "0.6.2";
 
 WIZARD.core = function(data){
     var wiz = data || {};
@@ -50,6 +49,19 @@ WIZARD.core = function(data){
     // Get the context of the canvas.
     wiz.ctx = wiz.canvas.getContext("2d");
     wiz.gl = wiz.glCanvas.getContext("webgl");
+
+    // Disable context menu when right click is pressed
+    wiz.canvas.oncontextmenu = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    };
+
+    wiz.glCanvas.oncontextmenu = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    };
 
     //Create audio context
     try {
@@ -249,8 +261,8 @@ WIZARD.core = function(data){
         WIZARD.loader.loadImages(arguments);
     };
 
-    wiz.noLoading = function(){
-        WIZARD.loader.noLoading();
+    wiz.skipLoading = function(){
+        WIZARD.loader.skipLoading();
     };
 
     wiz.loadSounds = function(){
@@ -321,7 +333,7 @@ WIZARD.core = function(data){
     wiz.drawText = function(text, x, y, font){
         var chars = "ABCDEFGHIJKLMNOP"+
             "QRSTUVWXYZ012345"+
-            "6789!?,.*><:    ";
+            "6789!?,.*><:%   ";
 
         for(var i = 0; i < text.length; i++){
             for(var j = 0; j < chars.length; j++){
@@ -543,17 +555,17 @@ WIZARD.input = {
             delete WIZARD.input.kJP[e.keyCode];
         };
 
-        window.onmousemove = function(e){
+        wiz.glCanvas.onmousemove = function(e){
             WIZARD.input.x = e.x;
             WIZARD.input.y = e.y;
         };
 
-        window.onmousedown = function(e){
+        wiz.glCanvas.onmousedown = function(e){
             WIZARD.input.mP[e.button] = true;
             if(WIZARD.input.mJP[e.button] != 0)WIZARD.input.mJP[e.button] = true;
         };
 
-        window.onmouseup = function(e){
+        wiz.glCanvas.onmouseup = function(e){
             delete WIZARD.input.mP[e.button];
             delete WIZARD.input.mJP[e.button];
             WIZARD.input.mR[e.button] = true;
@@ -710,7 +722,7 @@ WIZARD.loader = {
         }
     },
 
-    noLoading: function(){
+    skipLoading: function(){
         WIZARD.loader.wiz.ready();
     },
 
@@ -941,6 +953,10 @@ WIZARD.shader = {
         var shader = this.gl.createShader(type);
         this.gl.shaderSource(shader, source);
         this.gl.compileShader(shader);
+        var error = this.gl.getShaderInfoLog(shader);
+        if (error.length > 0) {
+            throw error;
+        }
         return shader;
     },
 
@@ -949,6 +965,10 @@ WIZARD.shader = {
         this.gl.attachShader(program, vs);
         this.gl.attachShader(program, fs);
         this.gl.linkProgram(program);
+        var error = this.gl.getProgramInfoLog(program);
+        if (error.length > 0) {
+            throw error;
+        }
         return program;
     }
 };
